@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
+  <title>Headroom AI Launcher</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- ======================= Header ======================= -->
+    <header id="topbar">
+      <div class="brand">
+        <img src="../assets/logo.svg" alt="Headroom logo" class="brand-logo" />
+        <div class="brand-text">
+          <h1>Headroom AI Launcher</h1>
+          <span class="brand-sub">Context optimization proxy for every AI coding agent</span>
+        </div>
+      </div>
+      <div class="topbar-status">
+        <div id="headroom-status" class="pill pill-unknown" title="Headroom CLI detection">
+          <span class="dot"></span><span id="headroom-status-text">Detecting Headroom…</span>
+        </div>
+        <button id="btn-scan-all" class="btn btn-ghost" title="Scan the system for all supported agents">
+          <svg viewBox="0 0 16 16" class="icon"><path d="M11.7 10.3a5.5 5.5 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3zM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" fill="currentColor"/></svg>
+          Scan System
+        </button>
+        <button id="btn-logs-toggle" class="btn btn-ghost" title="Toggle logs panel">
+          <svg viewBox="0 0 16 16" class="icon"><path d="M2 3h12v2H2zM2 7h12v2H2zM2 11h8v2H2z" fill="currentColor"/></svg>
+          Logs
+        </button>
+        <button id="btn-settings" class="btn btn-ghost" title="Headroom settings">
+          <svg viewBox="0 0 16 16" class="icon"><path d="M8 5.2A2.8 2.8 0 1 0 8 10.8 2.8 2.8 0 0 0 8 5.2zm0 4A1.2 1.2 0 1 1 8 6.8a1.2 1.2 0 0 1 0 2.4z" fill="currentColor"/><path d="M13.9 8.9l1.4 1.1-1.3 2.2-1.6-.7a5.9 5.9 0 0 1-1.2.7L10.9 14H8.4l-.3-1.8a5.9 5.9 0 0 1-1.2-.7l-1.6.7L4 10l1.4-1.1a6.2 6.2 0 0 1 0-1.4L4 6.4l1.3-2.2 1.6.7a5.9 5.9 0 0 1 1.2-.7L8.4 2.4h2.5l.3 1.8a5.9 5.9 0 0 1 1.2.7l1.6-.7L15.3 6l-1.4 1.1a6.2 6.2 0 0 1 0 1.4z" fill="currentColor" transform="scale(0.94) translate(0.5,0.3)"/></svg>
+          Settings
+        </button>
+      </div>
+    </header>
+
+    <div id="main-row">
+      <!-- ======================= Sidebar ======================= -->
+      <aside id="sidebar">
+        <div class="sidebar-search">
+          <input id="agent-filter" type="search" placeholder="Filter agents…" autocomplete="off" />
+        </div>
+        <div class="sidebar-section-label">SUPPORTED AGENTS</div>
+        <nav id="agent-list" aria-label="Supported agents"></nav>
+      </aside>
+
+      <!-- ======================= Detail pane ======================= -->
+      <main id="detail">
+        <div id="detail-empty" class="empty-state">
+          <img src="../assets/logo.svg" alt="" class="empty-logo" />
+          <h2>Select an agent</h2>
+          <p>Pick a supported AI agent on the left, configure its path and proxy settings, then launch it through Headroom.</p>
+        </div>
+
+        <div id="detail-content" class="hidden">
+          <!-- Agent header -->
+          <section class="agent-header">
+            <div id="agent-avatar" class="avatar">C</div>
+            <div class="agent-header-text">
+              <div class="agent-title-row">
+                <h2 id="agent-name">Agent</h2>
+                <span id="badge-interface" class="badge"></span>
+                <span id="badge-strategy" class="badge badge-alt"></span>
+                <span id="agent-state" class="state-dot state-stopped" title="stopped"></span>
+              </div>
+              <p id="agent-desc" class="muted"></p>
+              <div class="agent-meta muted">
+                <span id="agent-vendor"></span> · <code id="agent-wrap-cmd"></code> ·
+                <a id="agent-homepage" href="#" onclick="return false;">website</a>
+              </div>
+            </div>
+          </section>
+
+          <!-- Detection banner -->
+          <section id="detect-banner" class="banner hidden"></section>
+
+          <!-- Profiles bar -->
+          <section class="card profiles-bar">
+            <label for="profile-select">Configuration profile</label>
+            <select id="profile-select"></select>
+            <button id="btn-profile-saveas" class="btn btn-ghost" title="Save current settings as a new profile">Save As…</button>
+            <button id="btn-profile-delete" class="btn btn-ghost btn-danger-ghost" title="Delete selected profile">Delete</button>
+            <span class="flex-spacer"></span>
+            <span id="profile-hint" class="muted small"></span>
+          </section>
+
+          <!-- Connection -->
+          <section class="card">
+            <h3>Agent executable</h3>
+            <div class="field-row">
+              <input id="fld-path" type="text" placeholder="Auto-detect from PATH / well-known locations" spellcheck="false" />
+              <button id="btn-browse" class="btn">Browse…</button>
+              <button id="btn-scan-agent" class="btn">Scan</button>
+              <button id="btn-clear-path" class="btn btn-ghost" title="Clear explicit path (back to auto-detect)">✕</button>
+            </div>
+            <div id="detected-paths" class="detected-paths"></div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fld-port">Proxy port</label>
+                <input id="fld-port" type="number" min="1" max="65535" />
+                <span id="port-status" class="small muted"></span>
+              </div>
+              <div class="field">
+                <label for="fld-workdir">Working directory</label>
+                <div class="field-row">
+                  <input id="fld-workdir" type="text" placeholder="Current directory" spellcheck="false" />
+                  <button id="btn-browse-dir" class="btn btn-ghost">…</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label>Agent configuration file</label>
+              <div class="field-row">
+                <code id="agent-config-hint" class="config-hint"></code>
+                <button id="btn-open-config" class="btn btn-ghost" title="Reveal in file manager">Open location</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Headroom proxy options -->
+          <section class="card">
+            <h3>Headroom proxy</h3>
+            <div class="grid-2">
+              <div class="field">
+                <label for="fld-mode">Optimization mode</label>
+                <select id="fld-mode">
+                  <option value="cache">cache — freeze prior turns, maximise prefix-cache hits</option>
+                  <option value="token">token — aggressive compression, maximum savings</option>
+                </select>
+              </div>
+              <div class="field toggles">
+                <label class="toggle"><input id="tgl-memory" type="checkbox" /> <span>Persistent memory <em>(--memory)</em></span></label>
+                <label class="toggle"><input id="tgl-learn" type="checkbox" /> <span>Live traffic learning <em>(--learn)</em></span></label>
+                <label class="toggle"><input id="tgl-lossless" type="checkbox" /> <span>Lossless mode <em>(--lossless)</em></span></label>
+                <label class="toggle"><input id="tgl-noopt" type="checkbox" /> <span>Passthrough <em>(--no-optimize)</em></span></label>
+              </div>
+            </div>
+            <div class="field">
+              <label for="fld-extra-proxy">Extra proxy arguments</label>
+              <input id="fld-extra-proxy" type="text" placeholder='e.g. --rpm 120 --no-cache' spellcheck="false" />
+            </div>
+          </section>
+
+          <!-- Agent options -->
+          <section class="card">
+            <h3>Agent options</h3>
+            <div class="field">
+              <label for="fld-extra-agent">Extra agent arguments</label>
+              <input id="fld-extra-agent" type="text" placeholder='e.g. --resume' spellcheck="false" />
+            </div>
+            <div class="field">
+              <label>Environment overrides <span class="muted small">(applied after the proxy base URLs)</span></label>
+              <div id="env-editor"></div>
+              <button id="btn-env-add" class="btn btn-ghost small-btn">+ Add variable</button>
+            </div>
+          </section>
+
+          <!-- Launch bar -->
+          <section class="launch-bar">
+            <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch through Headroom</button>
+            <button id="btn-stop" class="btn btn-danger hidden">■ Stop</button>
+            <span id="launch-status" class="muted"></span>
+            <span class="flex-spacer"></span>
+            <button id="btn-save-config" class="btn">Save configuration</button>
+          </section>
+
+          <!-- Instructions (for IDE extensions) -->
+          <section id="instructions-card" class="card hidden">
+            <h3>Manual configuration</h3>
+            <p class="muted">This agent is an IDE extension. Once the proxy is running, point it at Headroom:</p>
+            <pre id="instructions-text" class="instructions"></pre>
+          </section>
+        </div>
+      </main>
+    </div>
+
+    <!-- ======================= Logs panel ======================= -->
+    <section id="logs-panel" class="collapsed">
+      <div class="logs-toolbar">
+        <span class="logs-title">Logs</span>
+        <select id="log-level-filter">
+          <option value="debug">debug+</option>
+          <option value="info" selected>info+</option>
+          <option value="warn">warn+</option>
+          <option value="error">error</option>
+        </select>
+        <label class="toggle small"><input id="log-autoscroll" type="checkbox" checked /> <span>Auto-scroll</span></label>
+        <span class="flex-spacer"></span>
+        <button id="btn-logs-clear" class="btn btn-ghost small-btn">Clear</button>
+      </div>
+      <div id="logs-view" role="log" aria-live="polite"></div>
+    </section>
+
+    <div id="toast-root"></div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

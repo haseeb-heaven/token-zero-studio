@@ -1,0 +1,25 @@
+{
+  "name": "headroom-ai-launcher",
+  "version": "1.0.0",
+  "description": "Professional cross-platform launcher for running AI coding agents through the Headroom optimization proxy",
+  "main": "dist/main/index.js",
+  "author": "Headroom AI Launcher",
+  "license": "MIT",
+  "scripts": {
+    "build": "npm run typecheck && node scripts/build.mjs",
+    "build:ci": "node scripts/build.mjs",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "coverage": "vitest run --coverage",
+    "start": "electron .",
+    "dev": "node scripts/build.mjs && electron ."
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "electron": "^33.0.0",
+    "esbuild": "^0.24.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
