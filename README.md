@@ -41,8 +41,8 @@ launches them with a single click.
 ## Quick start
 
 ```bash
-git clone https://github.com/haseeb-heaven/headroom-agent.git
-cd headroom-agent
+git clone https://github.com/haseeb-heaven/token-zero-studio.git
+cd token-zero-studio
 npm install
 npm run build     # bundles the Electron main, preload and renderer
 npm start         # launches the app
