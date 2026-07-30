@@ -281,7 +281,8 @@ function renderDetail(): void {
 
   // proxy options
   const activeProxyId = config?.activeProxy || 'headroom';
-  const activeProxyName = activeProxyId === 'headroom' ? 'Headroom' : activeProxyId === 'pxpipe' ? 'PxPipe' : activeProxyId === 'rtk' ? 'RTK' : activeProxyId === 'llmlingua' ? 'LLMLingua' : activeProxyId === 'litellm' ? 'LiteLLM' : 'Custom';
+  const proxyObj = PROXIES.find((p) => p.id === activeProxyId);
+  const activeProxyName = proxyObj?.name || 'Custom';
   const launchBtn = el('btn-launch');
   if (launchBtn) launchBtn.textContent = `▶ Launch ${agent.name} with ${activeProxyName}`;
 
@@ -300,7 +301,13 @@ function renderDetail(): void {
     } else if (activeProxyId === 'pxpipe') {
       descBanner.textContent = 'PxPipe: Multimodal context proxy that converts verbose logs into compressed PNG blocks.';
     } else if (activeProxyId === 'llmlingua') {
-      descBanner.textContent = 'LLMLingua: Microsoft LLMLingua-2 perplexity-based prompt compressor proxy gateway.';
+      descBanner.textContent = 'LLMLingua: Microsoft LLMLingua-2 perplexity-based prompt & KV-cache compressor (up to 20x token reduction).';
+    } else if (activeProxyId === 'tokenshift') {
+      descBanner.textContent = 'TokenShift: Endpoint-level token optimization & governance for Claude Code, Cursor, Copilot, and Codex.';
+    } else if (activeProxyId === 'caveman') {
+      descBanner.textContent = 'Caveman: Output compression skill forcing concise, high-signal responses across 30+ coding agents. Runs in wrapper mode.';
+    } else if (activeProxyId === 'leanctx') {
+      descBanner.textContent = 'LeanCTX: Context intelligence layer & shell-hook MCP context compressor for AI workflows.';
     } else if (activeProxyId === 'litellm') {
       descBanner.textContent = 'LiteLLM: AI proxy gateway with context compression and fallback middleware.';
     } else {

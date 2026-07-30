@@ -3,15 +3,18 @@ import { getProxy, hasProxy, proxyIds, PROXIES } from '../src/core/proxies/regis
 import { buildProxyEnv } from '../src/core/proxies/types';
 
 describe('proxy registry', () => {
-  it('registers headroom, pxpipe, rtk, llmlingua, litellm, and custom', () => {
+  it('registers headroom, pxpipe, rtk, llmlingua, litellm, tokenshift, caveman, leanctx, and custom', () => {
     const ids = proxyIds();
     expect(ids).toContain('headroom');
     expect(ids).toContain('pxpipe');
     expect(ids).toContain('rtk');
     expect(ids).toContain('llmlingua');
     expect(ids).toContain('litellm');
+    expect(ids).toContain('tokenshift');
+    expect(ids).toContain('caveman');
+    expect(ids).toContain('leanctx');
     expect(ids).toContain('custom');
-    expect(ids).toHaveLength(6);
+    expect(ids).toHaveLength(9);
   });
 
   it('hasProxy returns true only for known ids', () => {

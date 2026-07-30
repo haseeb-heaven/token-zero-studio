@@ -45,7 +45,7 @@ TokenZero - Studio supports 18 pre-installed AI coding agents:
 
 ## Features
 
-- **Multiple Token Cost Optimizers** — Headroom (`pip install headroom-ai`), RTK (`brew install rtk`), PxPipe (`npx pxpipe-proxy`), LLMLingua (`pip install llmlingua`), LiteLLM (`pip install litellm`), and Custom proxies.
+- **Multiple Token Cost Optimizers** — Headroom (`pip install headroom-ai`), RTK (`brew install rtk`), PxPipe (`npx pxpipe-proxy`), LLMLingua (`pip install llmlingua`), TokenShift (`pointfive.co/tokenshift`), Caveman (`npx -y github:JuliusBrussee/caveman`), LeanCTX (`leanctx.com`), LiteLLM (`pip install litellm`), and Custom proxies.
 - **Auto-detection** — Scans `PATH` and well-known install locations for both agents and proxy binaries.
 - **Saved Profiles** — Per-agent and per-proxy named configurations (path, port, mode, flags, extra args, env overrides, working directory).
 - **Per-Agent Ports** — Unique default ports so several agents run at once; live port-check and port-kill tools.
@@ -60,6 +60,9 @@ TokenZero - Studio supports 18 pre-installed AI coding agents:
   - **RTK** (`brew install rtk` or curl installer)
   - **PxPipe** (`npx pxpipe-proxy`)
   - **LLMLingua** (`pip install llmlingua`)
+  - **TokenShift** (local binary from `pointfive.co/tokenshift`)
+  - **Caveman** (`npx -y github:JuliusBrussee/caveman` or powershell installer)
+  - **LeanCTX** (shell-hook + MCP compressor from `leanctx.com`)
   - **LiteLLM** (`pip install litellm`)
   - **Custom** local proxy binary
 - One or more of the supported AI agents pre-installed on your system.

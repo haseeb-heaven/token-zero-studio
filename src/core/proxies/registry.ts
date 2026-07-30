@@ -134,6 +134,74 @@ export const PROXIES: ProxyDefinition[] = [
     homepage: 'https://github.com/BerriAI/litellm',
   },
   {
+    id: 'tokenshift',
+    name: 'TokenShift',
+    description: 'Endpoint-level token optimization and governance for coding agents.',
+    mode: 'server',
+    executables: ['tokenshift', 'tokenshift-proxy'],
+    wellKnownPaths: {
+      win32: ['C:\\Program Files\\TokenShift\\tokenshift.exe', '~\\.tokenshift\\bin\\tokenshift.exe', '~\\.local\\bin\\tokenshift.exe'],
+      darwin: ['/usr/local/bin/tokenshift', '/opt/homebrew/bin/tokenshift', '~/.tokenshift/bin/tokenshift'],
+      linux: ['/usr/local/bin/tokenshift', '~/.local/bin/tokenshift'],
+    },
+    detectCommand: 'tokenshift --version',
+    defaultPort: 8992,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'Download local binary installer from https://www.pointfive.co/tokenshift',
+    accent: '#3b82f6',
+    homepage: 'https://www.pointfive.co/tokenshift',
+  },
+  {
+    id: 'caveman',
+    name: 'Caveman',
+    description: 'Output compression skill for ultra-concise, high-signal responses across 30+ agents.',
+    mode: 'wrapper',
+    executables: ['caveman'],
+    wellKnownPaths: {
+      win32: ['~\\.caveman\\bin\\caveman.exe', '~\\.local\\bin\\caveman.exe', '%LOCALAPPDATA%\\npx\\caveman.cmd'],
+      darwin: ['/usr/local/bin/caveman', '/opt/homebrew/bin/caveman', '~/.local/bin/caveman', '~/.caveman/bin/caveman'],
+      linux: ['/usr/local/bin/caveman', '~/.local/bin/caveman', '~/.caveman/bin/caveman'],
+    },
+    detectCommand: 'caveman --version',
+    defaultPort: 0,
+    defaultFlags: {},
+    buildStartArgs: () => [],
+    envStyle: 'none',
+    installInstructions: 'npx -y github:JuliusBrussee/caveman (npm) | irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | iex (Windows)',
+    accent: '#eab308',
+    homepage: 'https://getcaveman.dev/docs',
+  },
+  {
+    id: 'leanctx',
+    name: 'LeanCTX',
+    description: 'Context intelligence layer & shell-hook MCP context compressor for AI workflows.',
+    mode: 'server',
+    executables: ['leanctx', 'lean-ctx'],
+    wellKnownPaths: {
+      win32: ['C:\\Program Files\\LeanCTX\\leanctx.exe', '~\\.leanctx\\bin\\leanctx.exe', '~\\.local\\bin\\leanctx.exe'],
+      darwin: ['/usr/local/bin/leanctx', '/opt/homebrew/bin/leanctx', '~/.local/bin/leanctx'],
+      linux: ['/usr/local/bin/leanctx', '~/.local/bin/leanctx'],
+    },
+    detectCommand: 'leanctx --version',
+    defaultPort: 8993,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'Follow installation guide at https://leanctx.com/docs/getting-started/',
+    accent: '#8b5cf6',
+    homepage: 'https://leanctx.com/docs/getting-started/',
+  },
+  {
     id: 'custom',
     name: 'Custom',
     description: 'User-defined proxy binary with custom start arguments and base URL.',
