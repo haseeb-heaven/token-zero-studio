@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping make Headroom AI Launcher better.
+Thanks for helping make Token Zero Studio better.
 
 ## Development setup
 

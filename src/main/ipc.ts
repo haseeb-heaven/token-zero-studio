@@ -113,7 +113,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   logger.subscribe((entry) => send(IPC.EventLog, entry));
   manager.onRuntimeChange((runtime) => send(IPC.EventRuntime, runtime));
 
-  logger.info('app', `Headroom AI Launcher starting on ${ctx.platform}`);
+  logger.info('app', `TokenZeroStudio starting on ${ctx.platform}`);
   logger.info('app', `Config file: ${store.path}`);
 
   /* ------------------------------ queries ------------------------------ */

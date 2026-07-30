@@ -1,9 +1,9 @@
-# Headroom AI Launcher
+# Token Zero Studio
 
 A professional, cross-platform desktop GUI for running every AI coding agent
 through the [Headroom](https://github.com) context-optimization proxy.
 
-Headroom wraps AI coding agents (Claude Code, Codex, Cline, Cursor, Goose,
+Token Zero Studio wraps AI coding agents (Claude Code, Codex, Cline, Cursor, Goose,
 Grok, OpenCode, and more) to compress context and cut token spend. This app is a
 thin, friendly wrapper: it lists the supported agents, finds them on your
 system, gathers the configuration needed to run each one through Headroom, and
@@ -48,6 +48,11 @@ npm run build     # bundles the Electron main, preload and renderer
 npm start         # launches the app
 ```
 
+### One-click build & run (Windows)
+
+Double-click `build_and_run.bat` to install dependencies (if missing), build the app and
+launch it in one step.
+
 ### Development
 
 ```bash
@@ -91,9 +96,9 @@ the launch lifecycle and the security model.
 
 Settings are persisted as JSON in the user data folder:
 
-- **Windows**: `%APPDATA%\headroom-ai-launcher\config.json`
-- **macOS**: `~/Library/Application Support/headroom-ai-launcher/config.json`
-- **Linux**: `~/.config/headroom-ai-launcher/config.json`
+- **Windows**: `%APPDATA%\token-zero-studio/config.json`
+- **macOS**: `~/Library/Application Support/token-zero-studio/config.json`
+- **Linux**: `~/.config/token-zero-studio/config.json`
 
 A corrupt file is automatically backed up as `config.json.corrupt` and
 replaced with defaults.

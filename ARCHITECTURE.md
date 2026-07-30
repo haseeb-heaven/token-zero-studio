@@ -1,6 +1,6 @@
 # Architecture
 
-Headroom AI Launcher is an Electron application built around a **pure,
+Token Zero Studio is an Electron application built around a **pure,
 unit-tested core** with thin platform layers on top. The core contains no
 Electron or Node imports, so it can be tested in isolation and reused outside
 the renderer.

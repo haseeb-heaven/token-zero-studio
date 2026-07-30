@@ -53,6 +53,8 @@ function emptyCtx(platform: PlatformName): PlatformContext {
     homeDir: platform === 'win32' ? 'C:\\Users\\u' : '/home/u',
     env: { PATH: '' },
     exists: () => false,
+    isFile: () => false,
+    readdir: () => [],
   };
 }
 

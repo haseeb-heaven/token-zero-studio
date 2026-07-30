@@ -87,7 +87,7 @@ export interface AppConfig {
   agents: AgentConfig[];
 }
 
-export type ScanSource = 'path' | 'well-known' | 'explicit' | 'none';
+export type ScanSource = 'path' | 'well-known' | 'drive' | 'deep' | 'explicit' | 'none';
 
 export interface ScanResult {
   agentId: string;

@@ -1,13 +1,13 @@
 # Changelog
 
-All notable changes to **Headroom AI Launcher** are documented here.
+All notable changes to **Token Zero Studio** are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
 ### Added
-- Initial public release of the Headroom AI Launcher.
+- Initial public release of Token Zero Studio.
 - Cross-platform (Windows, macOS, Linux) Electron + TypeScript desktop application.
 - Registry of all 18 AI coding agents supported by Headroom (`headroom wrap`):
   Claude Code, OpenAI Codex CLI, Cline, Continue, GitHub Copilot CLI, Cursor,

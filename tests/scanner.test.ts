@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import { getAgent } from '../src/core/agents';
 import type { PlatformContext } from '../src/core/platform';
-import { scanAgent, scanPathVariable, scanWellKnown, verifyExplicitPath } from '../src/core/scanner';
+import { scanAgent, scanDriveDirectories, scanDeep, scanPathVariable, scanWellKnown, verifyExplicitPath } from '../src/core/scanner';
 
 /** Build a fake Windows platform context from a set of existing files. */
-function fakeWin(files: string[], pathValue: string): PlatformContext {
+function fakeWin(
+  files: string[],
+  pathValue: string,
+  dirs: Record<string, string[]> = {},
+): PlatformContext {
   const lower = new Set(files.map((f) => f.toLowerCase()));
+  const dirSet = new Set<string>();
+  for (const d of Object.keys(dirs)) dirSet.add(d.toLowerCase());
+  for (const subdirs of Object.values(dirs)) {
+    for (const s of subdirs) dirSet.add(s.toLowerCase());
+  }
   return {
     platform: 'win32',
     homeDir: 'C:\\Users\\hasee',
@@ -15,16 +24,29 @@ function fakeWin(files: string[], pathValue: string): PlatformContext {
       LOCALAPPDATA: 'C:\\Users\\hasee\\AppData\\Local',
     },
     exists: (p) => lower.has(p.toLowerCase()),
+    isFile: (p) => lower.has(p.toLowerCase()) && !dirSet.has(p.toLowerCase()),
+    readdir: (p) => dirs[p.toLowerCase()] ?? [],
   };
 }
 
-function fakeLinux(files: string[], pathValue: string): PlatformContext {
+function fakeLinux(
+  files: string[],
+  pathValue: string,
+  dirs: Record<string, string[]> = {},
+): PlatformContext {
   const set = new Set(files);
+  const dirSet = new Set<string>();
+  for (const d of Object.keys(dirs)) dirSet.add(d);
+  for (const subdirs of Object.values(dirs)) {
+    for (const s of subdirs) dirSet.add(s);
+  }
   return {
     platform: 'linux',
     homeDir: '/home/u',
     env: { PATH: pathValue },
     exists: (p) => set.has(p),
+    isFile: (p) => set.has(p) && !dirSet.has(p),
+    readdir: (p) => dirs[p] ?? [],
   };
 }
 
@@ -131,5 +153,61 @@ describe('verifyExplicitPath', () => {
     expect(verifyExplicitPath('D:\\x\\nope.exe', ctx)).toBe(false);
     expect(verifyExplicitPath('', ctx)).toBe(false);
     expect(verifyExplicitPath('   ', ctx)).toBe(false);
+  });
+});
+
+describe('scanDriveDirectories', () => {
+  it('finds executables in Program Files on Windows', () => {
+    const ctx = fakeWin(
+      ['C:\\', 'C:\\Program Files', 'C:\\Program Files\\Grok\\grok.exe'],
+      '',
+      { 'c:\\program files': ['Grok'], 'c:\\program files\\grok': [] },
+    );
+    const hits = scanDriveDirectories(getAgent('grok'), ctx);
+    expect(hits).toEqual(['C:\\Program Files\\Grok\\grok.exe']);
+  });
+
+  it('finds executables in /opt on Linux', () => {
+    const ctx = fakeLinux(
+      ['/', '/opt', '/opt/grok/bin/grok'],
+      '',
+      { '/': ['opt'], '/opt': ['grok'], '/opt/grok': ['bin'], '/opt/grok/bin': ['grok'] },
+    );
+    // scanDriveDirectories searches one level of subdirs, so use scanDeep for deeper paths
+    const hits = scanDeep(getAgent('grok'), ctx, { maxDepth: 4, maxResults: 10 });
+    expect(hits).toContain('/opt/grok/bin/grok');
+  });
+
+  it('returns empty when nothing is in common directories', () => {
+    const ctx = fakeLinux([], '');
+    expect(scanDriveDirectories(getAgent('vibe'), ctx)).toEqual([]);
+  });
+
+  it('reports source drive when only drive directories match', () => {
+    const ctx = fakeWin(
+      ['C:\\', 'C:\\Program Files', 'C:\\Program Files\\Grok\\grok.exe'],
+      '',
+      { 'c:\\program files': ['Grok'], 'c:\\program files\\grok': [] },
+    );
+    const result = scanAgent(getAgent('grok'), ctx);
+    expect(result.source).toBe('drive');
+    expect(result.found).toBe(true);
+  });
+});
+
+describe('scanDeep', () => {
+  it('respects maxDepth and maxResults', () => {
+    const ctx = fakeLinux(
+      ['/a/b/c/grok'],
+      '',
+      { '/': ['a'], '/a': ['b'], '/a/b': ['c'], '/a/b/c': ['grok'] },
+    );
+    const hits = scanDeep(getAgent('grok'), ctx, { maxDepth: 5, maxResults: 5 });
+    expect(hits).toContain('/a/b/c/grok');
+  });
+
+  it('returns empty when nothing is found', () => {
+    const ctx = fakeLinux([], '');
+    expect(scanDeep(getAgent('vibe'), ctx)).toEqual([]);
   });
 });

@@ -8,6 +8,10 @@ export interface PlatformContext {
   env: Record<string, string | undefined>;
   /** File-exists probe; injectable for tests. */
   exists: (p: string) => boolean;
+  /** True when the path is a file (not a directory); injectable for tests. */
+  isFile: (p: string) => boolean;
+  /** Directory listing probe; injectable for tests. */
+  readdir: (p: string) => string[];
 }
 
 /** PATH list separator for the platform. */
@@ -81,10 +85,62 @@ export function normalizeForCompare(p: string, platform: PlatformName): string {
 
 /** Current platform context built from real Node values. */
 export function currentPlatformContext(exists: (p: string) => boolean): PlatformContext {
+  const fs = require('fs');
   return {
     platform: process.platform as PlatformName,
     homeDir: process.env.HOME ?? process.env.USERPROFILE ?? '',
     env: process.env,
     exists,
+    isFile: (p: string): boolean => {
+      try {
+        return fs.statSync(p).isFile();
+      } catch {
+        return false;
+      }
+    },
+    readdir: (p: string): string[] => {
+      try {
+        return fs.readdirSync(p, { withFileTypes: true }) as unknown as string[];
+      } catch {
+        return [];
+      }
+    },
   };
+}
+
+/**
+ * Common directories to search when an agent is not on PATH.
+ * These are searched on every drive on Windows, or at the filesystem root on
+ * macOS/Linux.
+ */
+export function commonSearchDirs(platform: PlatformName): string[] {
+  if (platform === 'win32') {
+    return [
+      'Program Files',
+      'Program Files (x86)',
+      'Tools',
+      'bin',
+      'local',
+      '.local\\bin',
+      'scoop\\apps',
+      'Users\\Public\\bin',
+    ];
+  }
+  return ['/usr/local/bin', '/opt', '/usr/bin', '/snap/bin'];
+}
+
+/**
+ * Enumerate available drives on Windows (C:\, D:\, ...).
+ * On macOS/Linux returns a single-root list.
+ */
+export function enumerateDrives(platform: PlatformName, exists: (p: string) => boolean): string[] {
+  if (platform === 'win32') {
+    const drives: string[] = [];
+    for (let i = 0; i < 26; i++) {
+      const drive = String.fromCharCode(65 + i) + ':\\';
+      if (exists(drive)) drives.push(drive);
+    }
+    return drives;
+  }
+  return ['/'];
 }

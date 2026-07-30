@@ -1,9 +1,9 @@
 {
-  "name": "headroom-ai-launcher",
+  "name": "token-zero-studio",
   "version": "1.0.0",
-  "description": "Professional cross-platform launcher for running AI coding agents through the Headroom optimization proxy",
+  "description": "Cross-platform GUI launcher for running AI coding agents through the Headroom context-optimization proxy",
   "main": "dist/main/index.js",
-  "author": "Headroom AI Launcher",
+  "author": "TokenZeroStudio",
   "license": "MIT",
   "scripts": {
     "build": "npm run typecheck && node scripts/build.mjs",

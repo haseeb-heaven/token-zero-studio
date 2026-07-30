@@ -15,7 +15,7 @@ function createWindow(): void {
     minHeight: 700,
     show: false,
     backgroundColor: dark ? '#0b0f17' : '#f2f4f9',
-    title: 'Headroom AI Launcher',
+    title: 'TokenZeroStudio',
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
