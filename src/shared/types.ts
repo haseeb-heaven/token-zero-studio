@@ -180,6 +180,7 @@ export const IPC = {
   HeadroomDetect: 'headroom:detect',
   ProxyList: 'proxies:list',
   ProxyDetect: 'proxy:detect',
+  InstallProxy: 'proxy:install',
   ConfigGet: 'config:get',
   ConfigSave: 'config:save',
   LaunchStart: 'launch:start',

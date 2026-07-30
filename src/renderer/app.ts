@@ -633,20 +633,54 @@ async function refreshHeadroomStatus(): Promise<void> {
   const pill = el('headroom-status');
   const text = el('headroom-status-text');
   const proxyId = config?.activeProxy || 'headroom';
+  const proxyDef = PROXIES.find((p) => p.id === proxyId) || { name: proxyId.toUpperCase() };
+
+  const installBanner = el('proxy-install-banner');
+  const installTitle = el('proxy-not-found-title');
+  const installDesc = el('proxy-not-found-desc');
+  const installBtn = el<HTMLButtonElement>('btn-install-proxy');
+
   try {
     const result = await api.detectProxy(proxyId);
     if (result.found) {
       pill.className = 'pill pill-ok';
-      text.textContent = `${proxyId.toUpperCase()} detected`;
-      pill.title = result.paths[0];
+      text.textContent = `${proxyDef.name} detected`;
+      if (installBanner) installBanner.classList.add('hidden');
     } else {
       pill.className = 'pill pill-bad';
-      text.textContent = `${proxyId.toUpperCase()} not found`;
-      pill.title = `Install ${proxyId} proxy or set explicit path in Settings`;
+      text.textContent = `${proxyDef.name} NOT FOUND`;
+      if (installBanner) {
+        installBanner.classList.remove('hidden');
+        if (installTitle) installTitle.textContent = `⚠️ ${proxyDef.name} Not Found`;
+        if (installDesc) installDesc.textContent = `${proxyDef.name} binary was not found on your system PATH or well-known locations.`;
+        if (installBtn) {
+          installBtn.textContent = `⚡ Install ${proxyDef.name} via CLI`;
+          installBtn.onclick = async () => {
+            installBtn.disabled = true;
+            installBtn.textContent = `⏳ Installing ${proxyDef.name}...`;
+            toast(`Executing CLI install for ${proxyDef.name}... Check logs for progress.`);
+            try {
+              const res = await api.installProxy(proxyId);
+              if (res.ok) {
+                toast(res.message);
+                await refreshHeadroomStatus();
+                if (selectedId) renderDetail();
+              } else {
+                toast(res.message, 'err');
+              }
+            } catch (err) {
+              toast(String(err instanceof Error ? err.message : err), 'err');
+            } finally {
+              installBtn.disabled = false;
+              installBtn.textContent = `⚡ Install ${proxyDef.name} via CLI`;
+            }
+          };
+        }
+      }
     }
-  } catch {
-    pill.className = 'pill pill-bad';
-    text.textContent = 'Detection failed';
+  } catch (err) {
+    pill.className = 'pill pill-unknown';
+    text.textContent = `${proxyDef.name} error`;
   }
 }
 

@@ -154,6 +154,45 @@ async function realFetch(url: string): Promise<{ status: number }> {
   return { status: res.status };
 }
 
+function getProxyInstallCommand(proxyId: string, platform: string): string {
+  if (proxyId === 'headroom') {
+    return platform === 'win32'
+      ? 'py -m pip install headroom-ai || python -m pip install headroom-ai'
+      : 'pip3 install headroom-ai || python3 -m pip install headroom-ai';
+  }
+  if (proxyId === 'pxpipe') {
+    return 'npm install -g pxpipe';
+  }
+  if (proxyId === 'rtk') {
+    if (platform === 'win32') {
+      return 'powershell -NoProfile -Command "iwr -useb https://raw.githubusercontent.com/rtk-ai/rtk/master/install.ps1 | iex"';
+    }
+    if (platform === 'darwin') {
+      return 'brew install rtk || curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh';
+    }
+    return 'curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh';
+  }
+  if (proxyId === 'llmlingua') {
+    return platform === 'win32'
+      ? 'py -m pip install llmlingua || python -m pip install llmlingua'
+      : 'pip3 install llmlingua || python3 -m pip install llmlingua';
+  }
+  if (proxyId === 'tokenshift') {
+    return platform === 'win32'
+      ? 'powershell -NoProfile -Command "curl -fsSL https://www.pointfive.co/tokenshift/install.ps1 | iex"'
+      : 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh';
+  }
+  if (proxyId === 'caveman') {
+    return platform === 'win32'
+      ? 'powershell -NoProfile -Command "irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | iex"'
+      : 'npx -y github:JuliusBrussee/caveman';
+  }
+  if (proxyId === 'leanctx') {
+    return 'npm install -g lean-ctx || pip install leanctx';
+  }
+  return '';
+}
+
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   const ctx = platformCtx();
   store = new ConfigStore(path.join(app.getPath('userData'), 'config.json'), fs);
@@ -215,6 +254,47 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const proxyDef = getProxy(targetId);
     const configuredPath = explicitPath ?? (targetId === 'headroom' ? config.headroomPath : undefined);
     return scanAgent(proxyToAgentDef(proxyDef), ctx, configuredPath);
+  });
+
+  ipcMain.handle(IPC.InstallProxy, async (_e, proxyId: string): Promise<{ ok: boolean; message: string }> => {
+    const proxyDef = getProxy(proxyId);
+    const cmd = getProxyInstallCommand(proxyId, ctx.platform);
+    if (!cmd) {
+      return { ok: false, message: `No automatic install command available for ${proxyDef.name}` };
+    }
+
+    logger.info('proxy', `Executing CLI installation for ${proxyDef.name}: ${cmd}`);
+    return new Promise((resolve) => {
+      const shellCmd = ctx.platform === 'win32' ? 'cmd.exe' : '/bin/sh';
+      const shellArgs = ctx.platform === 'win32' ? ['/c', cmd] : ['-c', cmd];
+
+      const child = nodeSpawn(shellCmd, shellArgs, { stdio: ['pipe', 'pipe', 'pipe'] });
+
+      child.stdout?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString().trim();
+        if (text) logger.info('proxy', `[${proxyDef.name} install] ${text}`);
+      });
+
+      child.stderr?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString().trim();
+        if (text) logger.warn('proxy', `[${proxyDef.name} install] ${text}`);
+      });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          logger.info('proxy', `Successfully installed ${proxyDef.name}`);
+          resolve({ ok: true, message: `Successfully installed ${proxyDef.name}` });
+        } else {
+          logger.error('proxy', `Failed to install ${proxyDef.name} (exit code ${code})`);
+          resolve({ ok: false, message: `Installation failed with exit code ${code}. Check logs for details.` });
+        }
+      });
+
+      child.on('error', (err) => {
+        logger.error('proxy', `Install process error: ${String(err)}`);
+        resolve({ ok: false, message: `Installation error: ${String(err)}` });
+      });
+    });
   });
 
   ipcMain.handle(IPC.ConfigGet, (): AppConfig => store!.load());

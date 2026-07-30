@@ -19,6 +19,7 @@ export interface HeadroomApi {
   detectHeadroom(): Promise<ScanResult>;
   listProxies(): Promise<ProxyDefinition[]>;
   detectProxy(proxyId?: string, explicitPath?: string): Promise<ScanResult>;
+  installProxy(proxyId: string): Promise<{ ok: boolean; message: string }>;
   getConfig(): Promise<AppConfig>;
   saveConfig(config: AppConfig): Promise<{ ok: boolean; error?: string }>;
   start(agentId: string): Promise<AgentRuntime>;
@@ -44,6 +45,7 @@ const api: HeadroomApi = {
   detectHeadroom: () => ipcRenderer.invoke(IPC.HeadroomDetect),
   listProxies: () => ipcRenderer.invoke(IPC.ProxyList),
   detectProxy: (proxyId, explicitPath) => ipcRenderer.invoke(IPC.ProxyDetect, proxyId, explicitPath),
+  installProxy: (proxyId) => ipcRenderer.invoke(IPC.InstallProxy, proxyId),
   getConfig: () => ipcRenderer.invoke(IPC.ConfigGet),
   saveConfig: (config) => ipcRenderer.invoke(IPC.ConfigSave, config),
   start: (agentId) => ipcRenderer.invoke(IPC.LaunchStart, agentId),
