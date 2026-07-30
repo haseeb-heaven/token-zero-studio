@@ -47,7 +47,13 @@ export async function waitForProxyReady(
   intervalMs = 250,
 ): Promise<boolean> {
   const deadline = Date.now() + timeoutMs;
-  const urls = [`http://127.0.0.1:${port}/livez`, `http://127.0.0.1:${port}/healthz`];
+  const urls = [
+    `http://127.0.0.1:${port}/livez`,
+    `http://127.0.0.1:${port}/healthz`,
+    `http://127.0.0.1:${port}/health`,
+    `http://127.0.0.1:${port}/v1/models`,
+    `http://127.0.0.1:${port}/`,
+  ];
   while (Date.now() < deadline) {
     for (const url of urls) {
       try {

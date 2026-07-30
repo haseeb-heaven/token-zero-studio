@@ -38,28 +38,6 @@ const logger = new Logger(3000);
 let manager: ProcessManager | null = null;
 let store: ConfigStore | null = null;
 
-/** Pseudo-agent used to auto-detect the headroom binary itself. */
-const HEADROOM_AGENT: AgentDefinition = {
-  id: 'headroom',
-  name: 'Headroom',
-  vendor: 'Headroom',
-  description: 'Headroom CLI',
-  interfaceType: 'cli',
-  launchStrategy: 'env',
-  executables: ['headroom'],
-  wellKnownPaths: {
-    win32: ['~\\AppData\\Roaming\\Python\\Scripts\\headroom.exe', '~\\.local\\bin\\headroom.exe'],
-    darwin: ['/usr/local/bin/headroom', '/opt/homebrew/bin/headroom', '~/.local/bin/headroom'],
-    linux: ['/usr/local/bin/headroom', '~/.local/bin/headroom', '/usr/bin/headroom'],
-  },
-  envStyle: 'none',
-  defaultArgs: [],
-  configFileHint: '',
-  defaultPort: 8989,
-  accent: '#38bdf8',
-  homepage: 'https://github.com',
-};
-
 function platformCtx() {
   return currentPlatformContext((p) => {
     try {
@@ -222,8 +200,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
 
   ipcMain.handle(IPC.HeadroomDetect, (): ScanResult => {
-    const configured = store!.load().headroomPath;
-    return scanAgent(HEADROOM_AGENT, ctx, configured);
+    const config = store!.load();
+    const targetId = config.activeProxy || 'headroom';
+    const proxyDef = getProxy(targetId);
+    const configuredPath = targetId === 'headroom' ? config.headroomPath : undefined;
+    return scanAgent(proxyToAgentDef(proxyDef), ctx, configuredPath);
   });
 
   ipcMain.handle(IPC.ProxyList, () => PROXIES);
@@ -273,9 +254,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const config = store!.load();
     const profile = activeProfile(config, agentId);
 
-    const headroomScan = scanAgent(HEADROOM_AGENT, ctx, config.headroomPath);
-    if (!headroomScan.found) {
-      const msg = 'Headroom binary not found. Install headroom-ai (pip install headroom-ai) or set its path in Settings.';
+    const activeProxyId = config.activeProxy || 'headroom';
+    const proxyDef = getProxy(activeProxyId);
+    const proxyAgentDef = proxyToAgentDef(proxyDef);
+
+    const proxyScan = scanAgent(proxyAgentDef, ctx, activeProxyId === 'headroom' ? config.headroomPath : undefined);
+    if (proxyDef.mode === 'server' && !proxyScan.found && proxyDef.id !== 'custom') {
+      const msg = `${proxyDef.name} binary not found. ${proxyDef.installInstructions ?? 'Install the proxy binary or set its path in Settings.'}`;
       logger.error('app', msg);
       throw new Error(msg);
     }
@@ -298,8 +283,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       }
     }
 
-    const proxyDef = getProxy(config.activeProxy || 'headroom');
-    const proxyBin = headroomScan.paths[0];
+    const proxyBin = proxyScan.paths[0] || (proxyDef.executables[0] ?? activeProxyId);
     const plan = buildLaunchPlan(agent, profile, proxyDef, proxyBin, agentBin);
     logger.info(agentId, `Launch plan: ${plan.headroomBin} ${plan.proxyArgs.join(' ')}`);
     const proxyFlags = {
