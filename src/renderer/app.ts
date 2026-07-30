@@ -308,10 +308,8 @@ function renderDetail(): void {
       descBanner.textContent = 'Caveman: Output compression skill forcing concise, high-signal responses across 30+ coding agents. Runs in wrapper mode.';
     } else if (activeProxyId === 'leanctx') {
       descBanner.textContent = 'LeanCTX: Context intelligence layer & shell-hook MCP context compressor for AI workflows.';
-    } else if (activeProxyId === 'litellm') {
-      descBanner.textContent = 'LiteLLM: AI proxy gateway with context compression and fallback middleware.';
     } else {
-      descBanner.textContent = 'Custom Proxy: User-defined proxy binary and endpoint.';
+      descBanner.textContent = 'Token Cost Optimizer Proxy.';
     }
   }
 

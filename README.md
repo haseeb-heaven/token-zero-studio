@@ -1,6 +1,6 @@
 # TokenZero - Studio
 
-A professional, zero-setup desktop GUI for connecting your pre-installed AI coding agents to token cost optimization proxies (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **LiteLLM**, **Custom**).
+A professional, zero-setup desktop GUI for connecting your pre-installed AI coding agents to token cost optimization proxies (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **TokenShift**, **Caveman**, **LeanCTX**).
 
 TokenZero - Studio wraps your pre-installed AI coding agents to compress context and cut token spend across all major providers.
 
@@ -14,7 +14,7 @@ Unlike projects such as **9Router** or **OmniRouter** (which act as complex API 
 
 - **Zero Setup & Zero Extra Downloads**: TokenZero - Studio is **not an LLM router**. You do not need to configure complex cloud proxy routes or download router daemons.
 - **Direct Local Launcher**: It is a lightweight desktop wrapper that detects **already pre-installed Coding Agents** on your system.
-- **Instant Proxy Binding**: It seamlessly attaches local token cost optimizers (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **LiteLLM**, or any **Custom** proxy) to your agent's API environment (`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL`) and launches the agent in a single click.
+- **Instant Proxy Binding**: It seamlessly attaches local token cost optimizers (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **TokenShift**, **Caveman**, **LeanCTX**) to your agent's API environment (`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL`) and launches the agent in a single click.
 
 ---
 
@@ -45,7 +45,7 @@ TokenZero - Studio supports 18 pre-installed AI coding agents:
 
 ## Features
 
-- **Multiple Token Cost Optimizers** — Headroom (`pip install headroom-ai`), RTK (`brew install rtk`), PxPipe (`npx pxpipe-proxy`), LLMLingua (`pip install llmlingua`), TokenShift (`pointfive.co/tokenshift`), Caveman (`npx -y github:JuliusBrussee/caveman`), LeanCTX (`leanctx.com`), LiteLLM (`pip install litellm`), and Custom proxies.
+- **Multiple Token Cost Optimizers** — Headroom (`pip install headroom-ai`), RTK (`brew install rtk`), PxPipe (`npx pxpipe-proxy`), LLMLingua (`pip install llmlingua`), TokenShift (`pointfive.co/tokenshift`), Caveman (`npx -y github:JuliusBrussee/caveman`), and LeanCTX (`leanctx.com`).
 - **Auto-detection** — Scans `PATH` and well-known install locations for both agents and proxy binaries.
 - **Saved Profiles** — Per-agent and per-proxy named configurations (path, port, mode, flags, extra args, env overrides, working directory).
 - **Per-Agent Ports** — Unique default ports so several agents run at once; live port-check and port-kill tools.
@@ -63,8 +63,6 @@ TokenZero - Studio supports 18 pre-installed AI coding agents:
   - **TokenShift** (local binary from `pointfive.co/tokenshift`)
   - **Caveman** (`npx -y github:JuliusBrussee/caveman` or powershell installer)
   - **LeanCTX** (shell-hook + MCP compressor from `leanctx.com`)
-  - **LiteLLM** (`pip install litellm`)
-  - **Custom** local proxy binary
 - One or more of the supported AI agents pre-installed on your system.
 
 ---

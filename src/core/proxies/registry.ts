@@ -6,7 +6,10 @@ import type { ProxyDefinition } from './types';
  * - **Headroom**: local HTTP proxy that compresses context (headroom-ai).
  * - **PxPipe**: local proxy that renders context as PNG image blocks.
  * - **RTK**: Rust binary that rewrites shell commands (not a server proxy).
- * - **Custom**: user-defined binary + args + base URL pattern.
+ * - **LLMLingua**: Microsoft prompt and KV-cache compressor (llmlingua).
+ * - **TokenShift**: Endpoint-level token optimization & governance.
+ * - **Caveman**: Output compression skill for concise responses.
+ * - **LeanCTX**: Context intelligence layer & shell-hook MCP context compressor.
  */
 export const PROXIES: ProxyDefinition[] = [
   {
@@ -110,30 +113,6 @@ export const PROXIES: ProxyDefinition[] = [
     homepage: 'https://github.com/microsoft/LLMLingua',
   },
   {
-    id: 'litellm',
-    name: 'LiteLLM',
-    description: 'LiteLLM AI proxy gateway with context compression and fallback middleware.',
-    mode: 'server',
-    executables: ['litellm'],
-    wellKnownPaths: {
-      win32: ['~\\AppData\\Roaming\\Python\\Scripts\\litellm.exe', '~\\.local\\bin\\litellm.exe'],
-      darwin: ['/usr/local/bin/litellm', '/opt/homebrew/bin/litellm', '~/.local/bin/litellm'],
-      linux: ['/usr/local/bin/litellm', '~/.local/bin/litellm'],
-    },
-    detectCommand: 'litellm --version',
-    defaultPort: 4000,
-    defaultFlags: {},
-    buildStartArgs: (port, flags) => {
-      const args = ['--port', String(port)];
-      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
-      return args;
-    },
-    envStyle: 'openai',
-    installInstructions: 'pip install litellm',
-    accent: '#f59e0b',
-    homepage: 'https://github.com/BerriAI/litellm',
-  },
-  {
     id: 'tokenshift',
     name: 'TokenShift',
     description: 'Endpoint-level token optimization and governance for coding agents.',
@@ -200,25 +179,6 @@ export const PROXIES: ProxyDefinition[] = [
     installInstructions: 'Follow installation guide at https://leanctx.com/docs/getting-started/',
     accent: '#8b5cf6',
     homepage: 'https://leanctx.com/docs/getting-started/',
-  },
-  {
-    id: 'custom',
-    name: 'Custom',
-    description: 'User-defined proxy binary with custom start arguments and base URL.',
-    mode: 'server',
-    executables: [],
-    wellKnownPaths: {},
-    detectCommand: 'echo custom',
-    defaultPort: 8989,
-    defaultFlags: {},
-    buildStartArgs: (_port, flags) => {
-      const args = flags.extraArgs ? flags.extraArgs.split(/\s+/) : [];
-      return args;
-    },
-    envStyle: 'both',
-    installInstructions: 'Configure the binary path and start arguments in Settings.',
-    accent: '#6b7280',
-    homepage: 'https://',
   },
 ];
 

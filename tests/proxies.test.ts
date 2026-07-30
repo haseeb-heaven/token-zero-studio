@@ -3,18 +3,16 @@ import { getProxy, hasProxy, proxyIds, PROXIES } from '../src/core/proxies/regis
 import { buildProxyEnv } from '../src/core/proxies/types';
 
 describe('proxy registry', () => {
-  it('registers headroom, pxpipe, rtk, llmlingua, litellm, tokenshift, caveman, leanctx, and custom', () => {
+  it('registers headroom, pxpipe, rtk, llmlingua, tokenshift, caveman, and leanctx', () => {
     const ids = proxyIds();
     expect(ids).toContain('headroom');
     expect(ids).toContain('pxpipe');
     expect(ids).toContain('rtk');
     expect(ids).toContain('llmlingua');
-    expect(ids).toContain('litellm');
     expect(ids).toContain('tokenshift');
     expect(ids).toContain('caveman');
     expect(ids).toContain('leanctx');
-    expect(ids).toContain('custom');
-    expect(ids).toHaveLength(9);
+    expect(ids).toHaveLength(7);
   });
 
   it('hasProxy returns true only for known ids', () => {
@@ -128,20 +126,16 @@ describe('rtk definition', () => {
   });
 });
 
-describe('custom definition', () => {
-  const def = getProxy('custom');
+describe('tokenshift definition', () => {
+  const def = getProxy('tokenshift');
 
   it('is server mode', () => {
     expect(def.mode).toBe('server');
   });
 
-  it('buildStartArgs uses extraArgs only', () => {
-    const args = def.buildStartArgs(9999, { extraArgs: '--my-flag --port 9999' });
-    expect(args).toEqual(['--my-flag', '--port', '9999']);
-  });
-
-  it('buildStartArgs returns empty when no extraArgs', () => {
-    expect(def.buildStartArgs(9999, {})).toEqual([]);
+  it('buildStartArgs uses port', () => {
+    const args = def.buildStartArgs(8992, {});
+    expect(args).toEqual(['--port', '8992']);
   });
 });
 
