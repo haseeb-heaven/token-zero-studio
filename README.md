@@ -57,8 +57,8 @@ TokenZero - Studio supports 18 pre-installed AI coding agents:
 - [Node.js](https://nodejs.org/) 18+ (for development)
 - One of the supported token cost optimizers:
   - **Headroom** (`pip install headroom-ai`)
-  - **PxPipe** (`npx pxpipe-proxy`)
   - **RTK** (`brew install rtk` or curl installer)
+  - **PxPipe** (`npx pxpipe-proxy`)
   - **LLMLingua** (`pip install llmlingua`)
   - **LiteLLM** (`pip install litellm`)
   - **Custom** local proxy binary

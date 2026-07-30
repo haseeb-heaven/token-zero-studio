@@ -86,6 +86,54 @@ export const PROXIES: ProxyDefinition[] = [
     homepage: 'https://github.com/rtk-ai/rtk',
   },
   {
+    id: 'llmlingua',
+    name: 'LLMLingua',
+    description: 'Microsoft LLMLingua-2 perplexity-based prompt compressor proxy gateway.',
+    mode: 'server',
+    executables: ['llmlingua', 'llmlingua-proxy'],
+    wellKnownPaths: {
+      win32: ['~\\AppData\\Roaming\\Python\\Scripts\\llmlingua.exe', '~\\.local\\bin\\llmlingua.exe'],
+      darwin: ['/usr/local/bin/llmlingua', '/opt/homebrew/bin/llmlingua', '~/.local/bin/llmlingua'],
+      linux: ['/usr/local/bin/llmlingua', '~/.local/bin/llmlingua'],
+    },
+    detectCommand: 'llmlingua --version',
+    defaultPort: 8991,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'pip install llmlingua',
+    accent: '#10b981',
+    homepage: 'https://github.com/microsoft/LLMLingua',
+  },
+  {
+    id: 'litellm',
+    name: 'LiteLLM',
+    description: 'LiteLLM AI proxy gateway with context compression and fallback middleware.',
+    mode: 'server',
+    executables: ['litellm'],
+    wellKnownPaths: {
+      win32: ['~\\AppData\\Roaming\\Python\\Scripts\\litellm.exe', '~\\.local\\bin\\litellm.exe'],
+      darwin: ['/usr/local/bin/litellm', '/opt/homebrew/bin/litellm', '~/.local/bin/litellm'],
+      linux: ['/usr/local/bin/litellm', '~/.local/bin/litellm'],
+    },
+    detectCommand: 'litellm --version',
+    defaultPort: 4000,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'openai',
+    installInstructions: 'pip install litellm',
+    accent: '#f59e0b',
+    homepage: 'https://github.com/BerriAI/litellm',
+  },
+  {
     id: 'custom',
     name: 'Custom',
     description: 'User-defined proxy binary with custom start arguments and base URL.',

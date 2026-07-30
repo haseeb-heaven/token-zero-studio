@@ -37,8 +37,8 @@ describe('resolveTheme', () => {
 });
 
 describe('theme in config', () => {
-  it('defaults to system', () => {
-    expect(defaultConfig().theme).toBe('system');
+  it('defaults to light', () => {
+    expect(defaultConfig().theme).toBe('light');
   });
 
   it('mergeConfig keeps a valid persisted theme', () => {
@@ -47,8 +47,8 @@ describe('theme in config', () => {
     expect(mergeConfig({ theme: 'system' }).theme).toBe('system');
   });
 
-  it('mergeConfig rejects an invalid theme and falls back to system', () => {
-    expect(mergeConfig({ theme: 'neon' }).theme).toBe('system');
-    expect(mergeConfig({ theme: 42 }).theme).toBe('system');
+  it('mergeConfig rejects an invalid theme and falls back to light', () => {
+    expect(mergeConfig({ theme: 'neon' }).theme).toBe('light');
+    expect(mergeConfig({ theme: 42 }).theme).toBe('light');
   });
 });

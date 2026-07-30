@@ -12,6 +12,8 @@ export interface PlatformContext {
   isFile: (p: string) => boolean;
   /** Directory listing probe; injectable for tests. */
   readdir: (p: string) => string[];
+  /** System command execution probe (where.exe / which); injectable for tests. */
+  execCommand?: (cmd: string) => string;
 }
 
 /** PATH list separator for the platform. */
@@ -86,6 +88,7 @@ export function normalizeForCompare(p: string, platform: PlatformName): string {
 /** Current platform context built from real Node values. */
 export function currentPlatformContext(exists: (p: string) => boolean): PlatformContext {
   const fs = require('fs');
+  const child_process = require('child_process');
   return {
     platform: process.platform as PlatformName,
     homeDir: process.env.HOME ?? process.env.USERPROFILE ?? '',
@@ -103,6 +106,17 @@ export function currentPlatformContext(exists: (p: string) => boolean): Platform
         return fs.readdirSync(p, { withFileTypes: true }) as unknown as string[];
       } catch {
         return [];
+      }
+    },
+    execCommand: (cmd: string): string => {
+      try {
+        return child_process.execSync(cmd, {
+          encoding: 'utf8',
+          timeout: 2500,
+          stdio: ['ignore', 'pipe', 'ignore'],
+        });
+      } catch {
+        return '';
       }
     },
   };

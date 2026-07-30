@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
@@ -122,7 +122,18 @@
 
           <!-- Token Optimizer proxy options -->
           <section class="card">
-            <h3 id="proxy-card-heading">Token Optimizer Proxy</h3>
+            <div class="field">
+              <label for="fld-active-proxy"><strong>Active Token Optimizer Proxy</strong></label>
+              <select id="fld-active-proxy">
+                <option value="headroom">Headroom — Context-freezing & LLM token compression (pip install headroom-ai)</option>
+                <option value="rtk">RTK (Rust Token Killer) — Shell command output compressor (brew install rtk)</option>
+                <option value="pxpipe">PxPipe — Multimodal PNG context proxy (npx pxpipe-proxy)</option>
+                <option value="llmlingua">LLMLingua — Microsoft prompt compressor (pip install llmlingua)</option>
+                <option value="litellm">LiteLLM — AI proxy gateway with context compression (pip install litellm)</option>
+                <option value="custom">Custom Proxy — User-defined binary & endpoint</option>
+              </select>
+            </div>
+            <div id="proxy-desc-banner" class="small muted" style="margin-bottom: 12px; font-style: italic;"></div>
             <div id="headroom-options-row" class="grid-2">
               <div class="field">
                 <label for="fld-mode">Optimization mode</label>
@@ -160,6 +171,14 @@
 
           <!-- Launch bar -->
           <section class="launch-bar">
+            <select id="launch-bar-proxy-select" class="launch-proxy-dropdown" title="Select Token Optimizer Proxy">
+              <option value="headroom">⚡ Headroom</option>
+              <option value="rtk">🗡️ RTK</option>
+              <option value="pxpipe">🖼️ PxPipe</option>
+              <option value="llmlingua">🧠 LLMLingua</option>
+              <option value="litellm">🔀 LiteLLM</option>
+              <option value="custom">⚙️ Custom</option>
+            </select>
             <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch with Token Optimizer</button>
             <button id="btn-stop" class="btn btn-danger hidden">■ Stop</button>
             <span id="launch-status" class="muted"></span>

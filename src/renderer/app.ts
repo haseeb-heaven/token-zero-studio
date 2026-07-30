@@ -280,11 +280,37 @@ function renderDetail(): void {
 
   // proxy options
   const activeProxyId = config?.activeProxy || 'headroom';
-  const activeProxyName = activeProxyId === 'headroom' ? 'Headroom' : activeProxyId === 'pxpipe' ? 'PxPipe' : activeProxyId === 'rtk' ? 'RTK' : 'Custom';
-  const proxyHeading = el('proxy-card-heading');
-  if (proxyHeading) proxyHeading.textContent = `${activeProxyName} Token Optimizer`;
+  const activeProxyName = activeProxyId === 'headroom' ? 'Headroom' : activeProxyId === 'pxpipe' ? 'PxPipe' : activeProxyId === 'rtk' ? 'RTK' : activeProxyId === 'llmlingua' ? 'LLMLingua' : activeProxyId === 'litellm' ? 'LiteLLM' : 'Custom';
   const launchBtn = el('btn-launch');
-  if (launchBtn) launchBtn.textContent = `▶ Launch through ${activeProxyName}`;
+  if (launchBtn) launchBtn.textContent = `▶ Launch ${agent.name} with ${activeProxyName}`;
+
+  const activeSelect = el<HTMLSelectElement>('fld-active-proxy');
+  if (activeSelect) activeSelect.value = activeProxyId;
+
+  const barSelect = el<HTMLSelectElement>('launch-bar-proxy-select');
+  if (barSelect) barSelect.value = activeProxyId;
+
+  const descBanner = el('proxy-desc-banner');
+  if (descBanner) {
+    if (activeProxyId === 'headroom') {
+      descBanner.textContent = 'Headroom: Context freezing & LLM token compression proxy with prefix-cache optimizations.';
+    } else if (activeProxyId === 'rtk') {
+      descBanner.textContent = 'RTK (Rust Token Killer): Shell command output compressor. Runs in wrapper mode without background server.';
+    } else if (activeProxyId === 'pxpipe') {
+      descBanner.textContent = 'PxPipe: Multimodal context proxy that converts verbose logs into compressed PNG blocks.';
+    } else if (activeProxyId === 'llmlingua') {
+      descBanner.textContent = 'LLMLingua: Microsoft LLMLingua-2 perplexity-based prompt compressor proxy gateway.';
+    } else if (activeProxyId === 'litellm') {
+      descBanner.textContent = 'LiteLLM: AI proxy gateway with context compression and fallback middleware.';
+    } else {
+      descBanner.textContent = 'Custom Proxy: User-defined proxy binary and endpoint.';
+    }
+  }
+
+  const headroomRow = el('headroom-options-row');
+  if (headroomRow) {
+    headroomRow.style.display = activeProxyId === 'headroom' ? 'grid' : 'none';
+  }
 
   el<HTMLSelectElement>('fld-mode').value = profile.mode;
   el<HTMLInputElement>('tgl-memory').checked = profile.memory;
@@ -779,6 +805,19 @@ async function init(): Promise<void> {
     const agent = agents.find((a) => a.id === selectedId);
     if (agent) void api.openPath(agent.configFileHint.split(' ')[0]);
   };
+
+  // active proxy selection
+  const onProxyChange = async (e: Event) => {
+    if (!config) return;
+    const selectedProxy = (e.target as HTMLSelectElement).value;
+    config.activeProxy = selectedProxy;
+    await saveConfig(true);
+    await refreshHeadroomStatus();
+    renderDetail();
+    toast(`Active Token Optimizer set to ${selectedProxy.toUpperCase()}`);
+  };
+  el<HTMLSelectElement>('fld-active-proxy').onchange = onProxyChange;
+  el<HTMLSelectElement>('launch-bar-proxy-select').onchange = onProxyChange;
 
   // profiles
   el<HTMLSelectElement>('profile-select').onchange = (e) => {

@@ -28,25 +28,25 @@
 }
 
 [data-theme='light'] {
-  --bg-0: #f2f4f9;
+  --bg-0: #f8fafc;
   --bg-1: #ffffff;
-  --bg-2: #edf1f7;
-  --bg-3: #e2e8f2;
-  --border: #d3dbe8;
-  --border-strong: #bfcbdd;
-  --text-0: #17202e;
-  --text-1: #4b5a74;
-  --text-2: #75849e;
-  --accent: #6366f1;
-  --accent-2: #0891b2;
-  --accent-soft: rgba(99, 102, 241, 0.1);
+  --bg-2: #f1f5f9;
+  --bg-3: #e2e8f0;
+  --border: #cbd5e1;
+  --border-strong: #94a3b8;
+  --text-0: #0f172a;
+  --text-1: #334155;
+  --text-2: #64748b;
+  --accent: #4f46e5;
+  --accent-2: #0284c7;
+  --accent-soft: rgba(79, 70, 229, 0.08);
   --ok: #059669;
-  --warn: #b45309;
+  --warn: #d97706;
   --err: #dc2626;
-  --code: #0e7490;
-  --link: #0e7490;
-  --badge-alt-text: #4f46e5;
-  --shadow: 0 8px 24px rgba(30, 41, 59, 0.1);
+  --code: #0369a1;
+  --link: #0284c7;
+  --badge-alt-text: #4338ca;
+  --shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -58,7 +58,6 @@ body {
   font-size: 13.5px;
   color: var(--text-0);
   background: var(--bg-0);
-  overflow: hidden;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -110,7 +109,7 @@ code { font-family: var(--mono); font-size: 12px; color: var(--code); }
   cursor: pointer; transition: background 0.12s, border-color 0.12s, transform 0.05s;
   white-space: nowrap;
 }
-.btn:hover { background: #222c42; border-color: #3a4a6e; }
+.btn:hover { background: var(--bg-3); border-color: var(--border-strong); color: var(--text-0); }
 .btn:active { transform: translateY(1px); }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; }
 .btn .icon { width: 14px; height: 14px; }
@@ -278,6 +277,16 @@ select option { background: var(--bg-2); }
   background: linear-gradient(180deg, var(--bg-2), var(--bg-1));
   border: 1px solid var(--border-strong); border-radius: var(--radius);
   box-shadow: var(--shadow);
+}
+.launch-proxy-dropdown {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  background: var(--bg-3);
+  border: 1px solid var(--border-strong);
+  color: var(--accent);
+  cursor: pointer;
 }
 #launch-status { font-size: 12.3px; }
 

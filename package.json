@@ -1,9 +1,9 @@
 {
-  "name": "agent-zero-studio",
+  "name": "token-zero-studio",
   "version": "1.0.0",
   "description": "Cross-platform GUI launcher for running AI coding agents through token-optimization proxies",
   "main": "dist/main/index.js",
-  "author": "AgentZeroStudio",
+  "author": "TokenZeroStudio",
   "license": "MIT",
   "scripts": {
     "build": "npm run typecheck && node scripts/build.mjs",

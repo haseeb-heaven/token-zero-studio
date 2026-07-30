@@ -63,7 +63,7 @@ export function defaultConfig(): AppConfig {
   return {
     headroomPath: '',
     proxyStartupTimeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
-    theme: 'system',
+    theme: 'light',
     activeProxy: 'headroom',
     proxies: PROXIES.map((proxy) => ({
       proxyId: proxy.id,

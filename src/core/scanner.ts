@@ -46,8 +46,43 @@ export function scanWellKnown(agent: AgentDefinition, ctx: PlatformContext): str
 }
 
 /**
+ * Probe OS system resolution utilities (`where.exe` on Windows, `which` on macOS/Linux).
+ * Returns verified absolute executable paths.
+ */
+export function scanSystemCommand(agent: AgentDefinition, ctx: PlatformContext): string[] {
+  if (!ctx.execCommand) return [];
+  const hits: string[] = [];
+
+  for (const exe of agent.executables) {
+    if (ctx.platform === 'win32') {
+      const output = ctx.execCommand(`where.exe ${exe}`);
+      if (output) {
+        for (const line of output.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (trimmed && ctx.exists(trimmed)) {
+            hits.push(trimmed);
+          }
+        }
+      }
+    } else {
+      const output = ctx.execCommand(`which -a ${exe} 2>/dev/null || which ${exe} 2>/dev/null`);
+      if (output) {
+        for (const line of output.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (trimmed && ctx.exists(trimmed)) {
+            hits.push(trimmed);
+          }
+        }
+      }
+    }
+  }
+
+  return dedupe(hits, ctx.platform);
+}
+
+/**
  * Full detection pass for one agent: explicit path (if given) wins, then PATH,
- * then well-known locations. Never throws - a missing agent is a normal case.
+ * then system commands (where/which), then well-known locations. Never throws.
  */
 export function scanAgent(
   agent: AgentDefinition,
@@ -64,14 +99,15 @@ export function scanAgent(
   }
 
   const pathHits = scanPathVariable(agent, ctx);
+  const sysHits = scanSystemCommand(agent, ctx);
   const wellKnownHits = scanWellKnown(agent, ctx);
   const driveHits = scanDriveDirectories(agent, ctx);
-  const all = dedupe([...pathHits, ...wellKnownHits, ...driveHits], ctx.platform);
+  const all = dedupe([...pathHits, ...sysHits, ...wellKnownHits, ...driveHits], ctx.platform);
 
   if (all.length === 0) {
     return { agentId: agent.id, found: false, paths: [], source: 'none' };
   }
-  if (pathHits.length > 0) return { agentId: agent.id, found: true, paths: all, source: 'path' };
+  if (pathHits.length > 0 || sysHits.length > 0) return { agentId: agent.id, found: true, paths: all, source: 'path' };
   if (wellKnownHits.length > 0) return { agentId: agent.id, found: true, paths: all, source: 'well-known' };
   return { agentId: agent.id, found: true, paths: all, source: 'drive' };
 }
