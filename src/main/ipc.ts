@@ -346,6 +346,14 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       logger.warn('app', `Could not open path ${target}: ${String(err)}`);
     }
   });
+
+  ipcMain.handle(IPC.OpenUrl, async (_e, targetUrl: string) => {
+    try {
+      await shell.openExternal(targetUrl);
+    } catch (err) {
+      logger.warn('app', `Failed to open URL "${targetUrl}": ${String(err)}`);
+    }
+  });
 }
 
 /** Current persisted configuration (main-process use only). */

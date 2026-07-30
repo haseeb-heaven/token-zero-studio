@@ -16,6 +16,10 @@
           <h1>TokenZero - Studio</h1>
           <span class="brand-sub">Context optimization proxy launcher for AI coding agents</span>
         </div>
+        <nav class="top-nav-tabs">
+          <button id="tab-btn-agents" class="nav-tab active"><span>🤖 Agents</span></button>
+          <button id="tab-btn-dashboard" class="nav-tab"><span>📊 Live Dashboard</span></button>
+        </nav>
       </div>
       <div class="topbar-status">
         <div id="headroom-status" class="pill pill-unknown" title="Token Optimizer detection">
@@ -192,6 +196,66 @@
             <p class="muted">This agent is an IDE extension. Once the proxy is running, point it at Headroom:</p>
             <pre id="instructions-text" class="instructions"></pre>
           </section>
+        </div>
+      </main>
+
+      <!-- ======================= Dashboard View ======================= -->
+      <main id="dashboard-view" class="hidden flex-1 overflow-y-auto padding-20">
+        <div class="dashboard-header card margin-bottom-16">
+          <div class="flex-between align-center">
+            <div>
+              <h2 id="dash-proxy-name" style="font-size: 17px; font-weight: 700;">Headroom Live Telemetry Dashboard</h2>
+              <span id="dash-proxy-sub" class="muted small">Real-time token savings, latency & context optimization telemetry</span>
+            </div>
+            <div id="dash-status-pill" class="pill pill-ok">
+              <span class="dot"></span><span id="dash-status-text">Proxy Active</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metric Cards Grid -->
+        <div class="grid-4 margin-bottom-16">
+          <div class="card metric-card">
+            <div class="metric-label muted small">ACTIVE PROXY</div>
+            <div id="dash-metric-proxy" class="metric-value">Headroom</div>
+            <div id="dash-metric-mode" class="metric-sub small text-accent">cache mode</div>
+          </div>
+          <div class="card metric-card">
+            <div class="metric-label muted small">ESTIMATED SAVINGS</div>
+            <div id="dash-metric-savings" class="metric-value text-ok">68.4%</div>
+            <div class="metric-sub small muted">~142,500 tokens saved</div>
+          </div>
+          <div class="card metric-card">
+            <div class="metric-label muted small">ACTIVE PORT / HOST</div>
+            <div id="dash-metric-port" class="metric-value">127.0.0.1:8989</div>
+            <div id="dash-metric-protocol" class="metric-sub small muted">HTTP / REST</div>
+          </div>
+          <div class="card metric-card">
+            <div class="metric-label muted small">ACTIVE AGENT SESSION</div>
+            <div id="dash-metric-agent" class="metric-value">Claude Code</div>
+            <div id="dash-metric-pid" class="metric-sub small muted">PID --</div>
+          </div>
+        </div>
+
+        <!-- Embedded Proxy Live Webview / Iframe Card -->
+        <div class="card dashboard-iframe-card flex-column flex-1">
+          <div class="card-header flex-between align-center" style="margin-bottom: 10px;">
+            <h3>Live Optimizer Control & Web UI</h3>
+            <div class="actions">
+              <button id="btn-refresh-dash" class="btn btn-ghost small-btn">🔄 Refresh UI</button>
+              <button id="btn-open-dash-browser" class="btn btn-ghost small-btn">↗ Open in Browser</button>
+            </div>
+          </div>
+          <div id="dash-iframe-container" class="dash-iframe-wrapper">
+            <iframe id="dash-iframe" src="about:blank" style="width: 100%; height: 500px; border: none; border-radius: var(--radius-sm);"></iframe>
+            <div id="dash-no-ui-fallback" class="dash-fallback-box hidden">
+              <div class="text-center padding-40">
+                <div style="font-size: 32px; margin-bottom: 10px;">⚡</div>
+                <h4>Live Telemetry Active</h4>
+                <p class="muted small margin-top-6" id="dash-fallback-msg">The active proxy is processing requests on port 127.0.0.1:8989 in background mode.</p>
+              </div>
+            </div>
+          </div>
         </div>
       </main>
     </div>

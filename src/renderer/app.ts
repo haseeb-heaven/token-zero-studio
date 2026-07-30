@@ -1,5 +1,6 @@
 import type { HeadroomApi } from '../preload/index';
 import { resolveTheme } from '../core/theme';
+import { PROXIES } from '../core/proxies/registry';
 import type {
   AgentConfig,
   AgentDefinition,
@@ -331,6 +332,97 @@ function renderDetail(): void {
   }
 
   updateLaunchBar();
+  if (activeTab === 'dashboard') renderDashboard();
+}
+
+let activeTab: 'agents' | 'dashboard' = 'agents';
+
+function switchTab(tab: 'agents' | 'dashboard'): void {
+  activeTab = tab;
+  const agentsTabBtn = el('tab-btn-agents');
+  const dashTabBtn = el('tab-btn-dashboard');
+  const detailView = el('detail');
+  const sidebarView = el('sidebar');
+  const dashView = el('dashboard-view');
+
+  if (tab === 'agents') {
+    agentsTabBtn?.classList.add('active');
+    dashTabBtn?.classList.remove('active');
+    detailView?.classList.remove('hidden');
+    sidebarView?.classList.remove('hidden');
+    dashView?.classList.add('hidden');
+  } else {
+    dashTabBtn?.classList.add('active');
+    agentsTabBtn?.classList.remove('active');
+    detailView?.classList.add('hidden');
+    sidebarView?.classList.add('hidden');
+    dashView?.classList.remove('hidden');
+    renderDashboard();
+  }
+}
+
+function renderDashboard(): void {
+  if (!config) return;
+  const activeProxyId = config.activeProxy || 'headroom';
+  const proxyDef = PROXIES.find((p) => p.id === activeProxyId) || {
+    id: activeProxyId,
+    name: activeProxyId.toUpperCase(),
+    defaultPort: 8989,
+    mode: 'server' as const,
+  };
+
+  const agent = selectedId ? agents.find((a) => a.id === selectedId) : undefined;
+  const profile = selectedId ? currentProfile() : undefined;
+  const port = profile?.port ?? proxyDef.defaultPort ?? 8989;
+  const runningState = selectedId ? runtimes.get(selectedId) : undefined;
+  const isUp = runningState?.state === 'running' || runningState?.state === 'proxy-up' || runningState?.state === 'starting';
+
+  const proxyNameEl = el('dash-proxy-name');
+  if (proxyNameEl) proxyNameEl.textContent = `${proxyDef.name} Live Telemetry Dashboard`;
+
+  const metricProxy = el('dash-metric-proxy');
+  if (metricProxy) metricProxy.textContent = proxyDef.name;
+
+  const metricMode = el('dash-metric-mode');
+  if (metricMode) metricMode.textContent = `${profile?.mode ?? 'cache'} mode`;
+
+  const metricPort = el('dash-metric-port');
+  if (metricPort) metricPort.textContent = `127.0.0.1:${port}`;
+
+  const metricAgent = el('dash-metric-agent');
+  if (metricAgent) metricAgent.textContent = agent?.name ?? 'None';
+
+  const metricPid = el('dash-metric-pid');
+  if (metricPid) metricPid.textContent = runningState?.proxyPid ? `PID ${runningState.proxyPid}` : 'Process Standby';
+
+  const statusText = el('dash-status-text');
+  const statusPill = el('dash-status-pill');
+  if (statusText && statusPill) {
+    statusText.textContent = isUp ? `${proxyDef.name} Active` : `${proxyDef.name} Standby`;
+    statusPill.className = `pill ${isUp ? 'pill-ok' : 'pill-unknown'}`;
+  }
+
+  const iframe = el<HTMLIFrameElement>('dash-iframe');
+  const fallback = el('dash-no-ui-fallback');
+  const fallbackMsg = el('dash-fallback-msg');
+
+  const targetUrl = `http://127.0.0.1:${port}/dashboard`;
+
+  if (iframe && fallback) {
+    if (proxyDef.mode === 'server') {
+      iframe.classList.remove('hidden');
+      fallback.classList.add('hidden');
+      if (iframe.src !== targetUrl) {
+        iframe.src = targetUrl;
+      }
+    } else {
+      iframe.classList.add('hidden');
+      fallback.classList.remove('hidden');
+      if (fallbackMsg) {
+        fallbackMsg.textContent = `${proxyDef.name} runs in wrapper mode. Terminal command outputs are compressed directly in shell streams.`;
+      }
+    }
+  }
 }
 
 function instructionsFor(agent: AgentDefinition, port: number, proxyName = 'Token Optimizer'): string {
@@ -814,10 +906,25 @@ async function init(): Promise<void> {
     await saveConfig(true);
     await refreshHeadroomStatus();
     renderDetail();
+    if (activeTab === 'dashboard') renderDashboard();
     toast(`Active Token Optimizer set to ${selectedProxy.toUpperCase()}`);
   };
   el<HTMLSelectElement>('fld-active-proxy').onchange = onProxyChange;
   el<HTMLSelectElement>('launch-bar-proxy-select').onchange = onProxyChange;
+
+  // tab navigation
+  el('tab-btn-agents').onclick = () => switchTab('agents');
+  el('tab-btn-dashboard').onclick = () => switchTab('dashboard');
+  el('btn-refresh-dash').onclick = () => {
+    const iframe = el<HTMLIFrameElement>('dash-iframe');
+    if (iframe && iframe.src) iframe.src = iframe.src;
+    toast('Refreshed live dashboard');
+  };
+  el('btn-open-dash-browser').onclick = () => {
+    const profile = selectedId ? currentProfile() : undefined;
+    const port = profile?.port ?? 8989;
+    void api.openUrl(`http://127.0.0.1:${port}/dashboard`);
+  };
 
   // profiles
   el<HTMLSelectElement>('profile-select').onchange = (e) => {

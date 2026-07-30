@@ -190,6 +190,7 @@ export const IPC = {
   PickExecutable: 'dialog:pick-executable',
   PickDirectory: 'dialog:pick-directory',
   OpenPath: 'shell:open-path',
+  OpenUrl: 'shell:open-url',
   PortCheck: 'port:check',
   PortKill: 'port:kill',
   // main -> renderer events

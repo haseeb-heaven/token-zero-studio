@@ -29,6 +29,7 @@ export interface HeadroomApi {
   pickExecutable(): Promise<string | null>;
   pickDirectory(): Promise<string | null>;
   openPath(target: string): Promise<void>;
+  openUrl(url: string): Promise<void>;
   checkPort(port: number): Promise<boolean>;
   killPort(port: number): Promise<{ killed: number; error?: string }>;
   onLog(listener: (entry: LogEntry) => void): () => void;
@@ -53,6 +54,7 @@ const api: HeadroomApi = {
   pickExecutable: () => ipcRenderer.invoke(IPC.PickExecutable),
   pickDirectory: () => ipcRenderer.invoke(IPC.PickDirectory),
   openPath: (target) => ipcRenderer.invoke(IPC.OpenPath, target),
+  openUrl: (url) => ipcRenderer.invoke(IPC.OpenUrl, url),
   checkPort: (port) => ipcRenderer.invoke(IPC.PortCheck, port),
   killPort: (port) => ipcRenderer.invoke(IPC.PortKill, port),
   onLog: (listener) => {
