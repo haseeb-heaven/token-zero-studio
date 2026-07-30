@@ -8,9 +8,31 @@ import { ConfigStore, activeProfile, validateProfile } from '../core/config';
 import { ProcessManager, SpawnedProcess, buildLaunchPlan, resolveAgentBinary } from '../core/launcher';
 import { Logger } from '../core/logger';
 import { currentPlatformContext } from '../core/platform';
+import { ProxyManager } from '../core/proxy-manager';
+import { PROXIES, getProxy } from '../core/proxies/registry';
+import type { ProxyDefinition } from '../core/proxies/types';
 import { scanAgent } from '../core/scanner';
 import type { AgentDefinition, AppConfig, IPC as IPCTypes, ScanResult } from '../shared/types';
 import { IPC } from '../shared/types';
+
+function proxyToAgentDef(proxy: ProxyDefinition): AgentDefinition {
+  return {
+    id: proxy.id,
+    name: proxy.name,
+    vendor: proxy.name,
+    description: proxy.description,
+    interfaceType: 'cli',
+    launchStrategy: 'env',
+    executables: proxy.executables,
+    wellKnownPaths: proxy.wellKnownPaths,
+    envStyle: proxy.envStyle,
+    defaultArgs: [],
+    configFileHint: '',
+    defaultPort: proxy.defaultPort,
+    accent: proxy.accent,
+    homepage: proxy.homepage,
+  };
+}
 
 const logger = new Logger(3000);
 let manager: ProcessManager | null = null;
@@ -33,7 +55,7 @@ const HEADROOM_AGENT: AgentDefinition = {
   envStyle: 'none',
   defaultArgs: [],
   configFileHint: '',
-  defaultPort: 8787,
+  defaultPort: 8989,
   accent: '#38bdf8',
   homepage: 'https://github.com',
 };
@@ -89,6 +111,66 @@ function checkPortFree(port: number): Promise<boolean> {
   });
 }
 
+/** Kill all processes listening on a TCP port (cross-platform). */
+async function killPort(port: number): Promise<{ killed: number; error?: string }> {
+  return new Promise((resolve) => {
+    if (process.platform === 'win32') {
+      const child = nodeSpawn('cmd.exe', ['/c', 'netstat -ano'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+      let output = '';
+      child.stdout?.on('data', (data) => {
+        output += data.toString();
+      });
+      child.on('close', () => {
+        const pids = new Set<number>();
+        const lines = output.split(/\r?\n/);
+        for (const line of lines) {
+          if (line.includes('LISTENING')) {
+            const parts = line.trim().split(/\s+/);
+            if (parts.length >= 5) {
+              const localAddr = parts[1];
+              const pidStr = parts[parts.length - 1];
+              if (localAddr.endsWith(`:${port}`) || localAddr.endsWith(`]:${port}`)) {
+                const pid = parseInt(pidStr, 10);
+                if (pid && pid > 0) {
+                  pids.add(pid);
+                }
+              }
+            }
+          }
+        }
+        if (pids.size === 0) {
+          resolve({ killed: 0 });
+          return;
+        }
+        let killedCount = 0;
+        for (const pid of pids) {
+          try {
+            process.kill(pid, 'SIGKILL');
+            killedCount++;
+          } catch {
+            try {
+              nodeSpawn('taskkill', ['/F', '/PID', String(pid)], { stdio: 'ignore' });
+              killedCount++;
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        resolve({ killed: killedCount });
+      });
+      child.on('error', (err) => resolve({ killed: 0, error: String(err) }));
+      return;
+    }
+    const child = nodeSpawn('sh', ['-c', `lsof -ti :${port} | xargs kill -9 2>/dev/null || true`], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
+    child.on('close', () => resolve({ killed: 1 }));
+    child.on('error', (err) => resolve({ killed: 0, error: String(err) }));
+  });
+}
+
 async function realFetch(url: string): Promise<{ status: number }> {
   const res = await fetch(url, { signal: AbortSignal.timeout(1500) });
   return { status: res.status };
@@ -97,12 +179,19 @@ async function realFetch(url: string): Promise<{ status: number }> {
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
   const ctx = platformCtx();
   store = new ConfigStore(path.join(app.getPath('userData'), 'config.json'), fs);
+  const proxyManager = new ProxyManager({
+    spawn: realSpawn,
+    fetch: realFetch,
+    logger,
+    platform: ctx.platform,
+  });
   manager = new ProcessManager({
     spawn: realSpawn,
     fetch: realFetch,
     logger,
     platform: ctx.platform,
     terminal: detectTerminal(ctx),
+    proxyManager,
   });
 
   const send = (channel: string, payload: unknown) => {
@@ -137,6 +226,16 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return scanAgent(HEADROOM_AGENT, ctx, configured);
   });
 
+  ipcMain.handle(IPC.ProxyList, () => PROXIES);
+
+  ipcMain.handle(IPC.ProxyDetect, (_e, proxyId?: string, explicitPath?: string): ScanResult => {
+    const config = store!.load();
+    const targetId = proxyId || config.activeProxy || 'headroom';
+    const proxyDef = getProxy(targetId);
+    const configuredPath = explicitPath ?? (targetId === 'headroom' ? config.headroomPath : undefined);
+    return scanAgent(proxyToAgentDef(proxyDef), ctx, configuredPath);
+  });
+
   ipcMain.handle(IPC.ConfigGet, (): AppConfig => store!.load());
 
   ipcMain.handle(IPC.ConfigSave, (_e, config: AppConfig): { ok: boolean; error?: string } => {
@@ -160,6 +259,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
 
   ipcMain.handle(IPC.PortCheck, (_e, port: number) => checkPortFree(port));
+  ipcMain.handle(IPC.PortKill, async (_e, port: number) => {
+    logger.warn('app', `Killing processes on port ${port}`);
+    const result = await killPort(port);
+    logger.info('app', `Port kill result: ${JSON.stringify(result)}`);
+    return result;
+  });
 
   /* ------------------------------ launching ----------------------------- */
 
@@ -193,9 +298,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       }
     }
 
-    const plan = buildLaunchPlan(agent, profile, headroomScan.paths[0], agentBin);
+    const proxyDef = getProxy(config.activeProxy || 'headroom');
+    const proxyBin = headroomScan.paths[0];
+    const plan = buildLaunchPlan(agent, profile, proxyDef, proxyBin, agentBin);
     logger.info(agentId, `Launch plan: ${plan.headroomBin} ${plan.proxyArgs.join(' ')}`);
-    return manager!.start(plan, agent.name, config.proxyStartupTimeoutMs);
+    const proxyFlags = {
+      mode: profile.mode,
+      memory: profile.memory,
+      learn: profile.learn,
+      lossless: profile.lossless,
+      noOptimize: profile.noOptimize,
+      extraArgs: profile.extraProxyArgs,
+    };
+    return manager!.start(plan, proxyDef, proxyBin, proxyFlags, agent.name, config.proxyStartupTimeoutMs);
   });
 
   ipcMain.handle(IPC.LaunchStop, (_e, agentId: string) => {

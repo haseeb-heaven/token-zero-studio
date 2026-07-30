@@ -8,6 +8,8 @@ import type {
   ScanResult,
 } from '../shared/types';
 
+import type { ProxyDefinition } from '../core/proxies/types';
+
 /** Typed API surface exposed to the renderer as window.headroom. */
 export interface HeadroomApi {
   platform: string;
@@ -15,6 +17,8 @@ export interface HeadroomApi {
   scanAll(): Promise<ScanResult[]>;
   scanAgent(agentId: string, explicitPath?: string): Promise<ScanResult>;
   detectHeadroom(): Promise<ScanResult>;
+  listProxies(): Promise<ProxyDefinition[]>;
+  detectProxy(proxyId?: string, explicitPath?: string): Promise<ScanResult>;
   getConfig(): Promise<AppConfig>;
   saveConfig(config: AppConfig): Promise<{ ok: boolean; error?: string }>;
   start(agentId: string): Promise<AgentRuntime>;
@@ -26,6 +30,7 @@ export interface HeadroomApi {
   pickDirectory(): Promise<string | null>;
   openPath(target: string): Promise<void>;
   checkPort(port: number): Promise<boolean>;
+  killPort(port: number): Promise<{ killed: number; error?: string }>;
   onLog(listener: (entry: LogEntry) => void): () => void;
   onRuntime(listener: (runtime: AgentRuntime) => void): () => void;
 }
@@ -36,6 +41,8 @@ const api: HeadroomApi = {
   scanAll: () => ipcRenderer.invoke(IPC.ScanAll),
   scanAgent: (agentId, explicitPath) => ipcRenderer.invoke(IPC.ScanAgent, agentId, explicitPath),
   detectHeadroom: () => ipcRenderer.invoke(IPC.HeadroomDetect),
+  listProxies: () => ipcRenderer.invoke(IPC.ProxyList),
+  detectProxy: (proxyId, explicitPath) => ipcRenderer.invoke(IPC.ProxyDetect, proxyId, explicitPath),
   getConfig: () => ipcRenderer.invoke(IPC.ConfigGet),
   saveConfig: (config) => ipcRenderer.invoke(IPC.ConfigSave, config),
   start: (agentId) => ipcRenderer.invoke(IPC.LaunchStart, agentId),
@@ -47,6 +54,7 @@ const api: HeadroomApi = {
   pickDirectory: () => ipcRenderer.invoke(IPC.PickDirectory),
   openPath: (target) => ipcRenderer.invoke(IPC.OpenPath, target),
   checkPort: (port) => ipcRenderer.invoke(IPC.PortCheck, port),
+  killPort: (port) => ipcRenderer.invoke(IPC.PortKill, port),
   onLog: (listener) => {
     const wrapped = (_e: unknown, entry: LogEntry) => listener(entry);
     ipcRenderer.on(IPC.EventLog, wrapped);

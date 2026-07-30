@@ -47,7 +47,7 @@ export function scanWellKnown(agent: AgentDefinition, ctx: PlatformContext): str
 
 /**
  * Full detection pass for one agent: explicit path (if given) wins, then PATH,
- * then well-known locations. Never throws — a missing agent is a normal case.
+ * then well-known locations. Never throws - a missing agent is a normal case.
  */
 export function scanAgent(
   agent: AgentDefinition,
@@ -59,7 +59,7 @@ export function scanAgent(
     if (ctx.exists(expanded)) {
       return { agentId: agent.id, found: true, paths: [expanded], source: 'explicit' };
     }
-    // Explicit path was configured but no longer exists — fall through to auto
+    // Explicit path was configured but no longer exists - fall through to auto
     // detection so the user still gets a working suggestion.
   }
 
@@ -126,7 +126,7 @@ function scanSubdirs(dir: string, ctx: PlatformContext): string[] {
 
 /**
  * Optional deep scan: recursively search a limited set of root directories for
- * the agent binary. Use sparingly — this is slower than PATH/well-known/drive
+ * the agent binary. Use sparingly - this is slower than PATH/well-known/drive
  * scans. Returns at most `maxResults` hits.
  */
 export function scanDeep(
@@ -163,7 +163,7 @@ export function scanDeep(
           search(joinPath(ctx.platform, dir, entry), depth + 1);
         }
       } catch {
-        /* permission denied or not a directory — skip */
+        /* permission denied or not a directory - skip */
       }
     }
   };

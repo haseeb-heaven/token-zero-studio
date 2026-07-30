@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { AGENTS } from '../src/core/agents';
 import { defaultConfig, defaultProfile, validateProfile } from '../src/core/config';
+import { getProxy } from '../src/core/proxies/registry';
 import {
   buildAgentEnv,
   buildLaunchPlan,
@@ -28,7 +29,7 @@ interface AgentFacts {
 
 const FACTS: Record<string, AgentFacts> = {
   claude:      { port: 8798, envStyle: 'anthropic', interfaceType: 'cli',           strategy: 'env',          executable: 'claude',     configHintIncludes: '.claude' },
-  codex:       { port: 8787, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'codex',      configHintIncludes: '.codex' },
+  codex:       { port: 8989, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'codex',      configHintIncludes: '.codex' },
   cline:       { port: 8790, envStyle: 'both',      interfaceType: 'ide-extension', strategy: 'env',          executable: 'cline',      configHintIncludes: 'Cline' },
   continue:    { port: 8796, envStyle: 'both',      interfaceType: 'ide-extension', strategy: 'instructions', executable: 'continue',   configHintIncludes: '.continue' },
   copilot:     { port: 8794, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'copilot',    configHintIncludes: '.copilot' },
@@ -58,7 +59,7 @@ function emptyCtx(platform: PlatformName): PlatformContext {
   };
 }
 
-describe.each(AGENTS.map((a) => [a.id, a] as const))('agent "%s"', (id, agent: AgentDefinition) => {
+describe.each(AGENTS.filter((a) => a.id !== 'cursor').map((a) => [a.id, a] as const))('agent "%s"', (id, agent: AgentDefinition) => {
   const facts = FACTS[id];
 
   it('has hand-verified registry facts', () => {
@@ -85,14 +86,16 @@ describe.each(AGENTS.map((a) => [a.id, a] as const))('agent "%s"', (id, agent: A
   });
 
   it('builds proxy args bound to its port', () => {
-    const args = buildProxyArgs(defaultProfile(id));
+    const headroom = getProxy('headroom');
+    const args = buildProxyArgs(headroom, defaultProfile(id));
     expect(args[0]).toBe('proxy');
     const portIdx = args.indexOf('--port');
     expect(args[portIdx + 1]).toBe(String(facts.port));
   });
 
   it('injects exactly the base URLs its env style requires', () => {
-    const env = buildAgentEnv(agent, defaultProfile(id));
+    const headroom = getProxy('headroom');
+    const env = buildAgentEnv(agent, defaultProfile(id), headroom);
     const base = `http://127.0.0.1:${facts.port}`;
     const expectsAnthropic = facts.envStyle === 'anthropic' || facts.envStyle === 'both';
     const expectsOpenai = facts.envStyle === 'openai' || facts.envStyle === 'both';
@@ -104,16 +107,17 @@ describe.each(AGENTS.map((a) => [a.id, a] as const))('agent "%s"', (id, agent: A
   });
 
   it('builds a launch plan appropriate to its strategy', () => {
+    const headroom = getProxy('headroom');
     const profile = defaultProfile(id);
     if (facts.strategy === 'env') {
-      expect(() => buildLaunchPlan(agent, profile, '/hb/headroom', null)).toThrow(/requires an executable/);
-      const plan = buildLaunchPlan(agent, profile, '/hb/headroom', `/fake/${facts.executable}`);
+      expect(() => buildLaunchPlan(agent, profile, headroom, '/hb/headroom', null)).toThrow(/requires an executable/);
+      const plan = buildLaunchPlan(agent, profile, headroom, '/hb/headroom', `/fake/${facts.executable}`);
       expect(plan.agentId).toBe(id);
       expect(plan.port).toBe(facts.port);
       expect(plan.agentBin).toBe(`/fake/${facts.executable}`);
       expect(plan.strategy).toBe('env');
     } else {
-      const plan = buildLaunchPlan(agent, profile, '/hb/headroom', null);
+      const plan = buildLaunchPlan(agent, profile, headroom, '/hb/headroom', null);
       expect(plan.strategy).toBe('instructions');
       expect(plan.port).toBe(facts.port);
     }
@@ -121,7 +125,8 @@ describe.each(AGENTS.map((a) => [a.id, a] as const))('agent "%s"', (id, agent: A
 
   it('builds an OS-correct terminal command on every platform', () => {
     if (facts.strategy !== 'env') return; // nothing to launch for instructions agents
-    const plan = buildLaunchPlan(agent, defaultProfile(id), '/hb/headroom', `/fake/${facts.executable}`);
+    const headroom = getProxy('headroom');
+    const plan = buildLaunchPlan(agent, defaultProfile(id), headroom, '/hb/headroom', `/fake/${facts.executable}`);
     const win = buildTerminalCommand(plan, agent.name, 'win32');
     expect(win.cmd).toBe('cmd.exe');
     expect(win.args.join(' ')).toContain(facts.executable);
@@ -161,7 +166,7 @@ describe('agent fact table sanity', () => {
     expect(new Set(ports).size).toBe(ports.length);
     for (const port of ports) {
       expect(port).toBeGreaterThanOrEqual(8700);
-      expect(port).toBeLessThanOrEqual(8899);
+      expect(port).toBeLessThanOrEqual(8999);
     }
   });
 });

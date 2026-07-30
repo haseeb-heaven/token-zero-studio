@@ -274,11 +274,18 @@ function renderDetail(): void {
   el<HTMLInputElement>('fld-path').value = profile.agentPath;
   el<HTMLInputElement>('fld-port').value = String(profile.port);
   el<HTMLInputElement>('fld-workdir').value = profile.workingDirectory;
-  el('agent-config-hint').textContent = agent.configFileHint || '—';
+  el('agent-config-hint').textContent = agent.configFileHint || '-';
   el('port-status').textContent = '';
   renderDetectedPaths(agent, scan);
 
   // proxy options
+  const activeProxyId = config?.activeProxy || 'headroom';
+  const activeProxyName = activeProxyId === 'headroom' ? 'Headroom' : activeProxyId === 'pxpipe' ? 'PxPipe' : activeProxyId === 'rtk' ? 'RTK' : 'Custom';
+  const proxyHeading = el('proxy-card-heading');
+  if (proxyHeading) proxyHeading.textContent = `${activeProxyName} Token Optimizer`;
+  const launchBtn = el('btn-launch');
+  if (launchBtn) launchBtn.textContent = `▶ Launch through ${activeProxyName}`;
+
   el<HTMLSelectElement>('fld-mode').value = profile.mode;
   el<HTMLInputElement>('tgl-memory').checked = profile.memory;
   el<HTMLInputElement>('tgl-learn').checked = profile.learn;
@@ -292,7 +299,7 @@ function renderDetail(): void {
   const instrCard = el('instructions-card');
   if (agent.launchStrategy === 'instructions') {
     instrCard.classList.remove('hidden');
-    el('instructions-text').textContent = instructionsFor(agent, profile.port);
+    el('instructions-text').textContent = instructionsFor(agent, profile.port, activeProxyName);
   } else {
     instrCard.classList.add('hidden');
   }
@@ -300,20 +307,20 @@ function renderDetail(): void {
   updateLaunchBar();
 }
 
-function instructionsFor(agent: AgentDefinition, port: number): string {
+function instructionsFor(agent: AgentDefinition, port: number, proxyName = 'Token Optimizer'): string {
   if (agent.id === 'continue') {
     return [
       `1. Keep this proxy running (Launch above).`,
       `2. Edit ~/.continue/config.json (or config.yaml) and add an OpenAI-compatible model:`,
       ``,
       `   { "models": [{`,
-      `       "title": "Headroom",`,
+      `       "title": "${proxyName}",`,
       `       "provider": "openai",`,
       `       "model": "default",`,
       `       "apiBase": "http://127.0.0.1:${port}/v1"`,
       `   }] }`,
       ``,
-      `3. Select the "Headroom" model in Continue.`,
+      `3. Select the "${proxyName}" model in Continue.`,
     ].join('\n');
   }
   return `Point ${agent.name} at the local proxy:\n  ANTHROPIC_BASE_URL=http://127.0.0.1:${port}\n  OPENAI_BASE_URL=http://127.0.0.1:${port}/v1`;
@@ -497,21 +504,22 @@ function scrollLogs(): void {
   }
 }
 
-/* ============================ Headroom pill ============================ */
+/* ============================ Proxy status pill ============================ */
 
 async function refreshHeadroomStatus(): Promise<void> {
   const pill = el('headroom-status');
   const text = el('headroom-status-text');
+  const proxyId = config?.activeProxy || 'headroom';
   try {
-    const result = await api.detectHeadroom();
+    const result = await api.detectProxy(proxyId);
     if (result.found) {
       pill.className = 'pill pill-ok';
-      text.textContent = 'Headroom detected';
+      text.textContent = `${proxyId.toUpperCase()} detected`;
       pill.title = result.paths[0];
     } else {
       pill.className = 'pill pill-bad';
-      text.textContent = 'Headroom not found';
-      pill.title = 'Install with: pip install headroom-ai';
+      text.textContent = `${proxyId.toUpperCase()} not found`;
+      pill.title = `Install ${proxyId} proxy or set explicit path in Settings`;
     }
   } catch {
     pill.className = 'pill pill-bad';
@@ -521,7 +529,7 @@ async function refreshHeadroomStatus(): Promise<void> {
 
 /* =========================== Settings modal =========================== */
 
-function openSettings(): void {
+async function openSettings(): Promise<void> {
   if (!config) return;
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -529,13 +537,29 @@ function openSettings(): void {
   modal.className = 'modal';
 
   const title = document.createElement('h2');
-  title.textContent = 'Headroom settings';
+  title.textContent = 'Studio settings';
 
-  // headroom binary path
+  // Active proxy selector
+  const proxyField = document.createElement('div');
+  proxyField.className = 'field';
+  const proxyLabel = document.createElement('label');
+  proxyLabel.textContent = 'Active Proxy';
+  const proxySelect = document.createElement('select');
+  const proxies = await api.listProxies();
+  for (const p of proxies) {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+    opt.textContent = `${p.name} — ${p.description}`;
+    opt.selected = (config.activeProxy || 'headroom') === p.id;
+    proxySelect.appendChild(opt);
+  }
+  proxyField.append(proxyLabel, proxySelect);
+
+  // proxy binary path
   const pathField = document.createElement('div');
   pathField.className = 'field';
   const pathLabel = document.createElement('label');
-  pathLabel.textContent = 'Headroom executable (empty = auto-detect)';
+  pathLabel.textContent = 'Proxy executable (empty = auto-detect)';
   const pathRow = document.createElement('div');
   pathRow.className = 'field-row';
   const pathInput = document.createElement('input');
@@ -557,7 +581,7 @@ function openSettings(): void {
   const timeoutField = document.createElement('div');
   timeoutField.className = 'field';
   const timeoutLabel = document.createElement('label');
-  timeoutLabel.textContent = 'Proxy startup timeout (seconds) — first boot loads compression models';
+  timeoutLabel.textContent = 'Proxy startup timeout (seconds)';
   const timeoutInput = document.createElement('input');
   timeoutInput.type = 'number';
   timeoutInput.min = '5';
@@ -587,17 +611,23 @@ function openSettings(): void {
 
   const runDetect = async () => {
     detectStatus.textContent = 'Detecting…';
-    const res = await api.detectHeadroom();
-    detectStatus.textContent = res.found ? `✓ Found: ${res.paths[0]}` : '✗ Not found — install with: pip install headroom-ai';
+    const selectedProxy = proxySelect.value;
+    const res = await api.detectProxy(selectedProxy, pathInput.value.trim() || undefined);
+    detectStatus.textContent = res.found ? `Found: ${res.paths[0]}` : `Not found — configure binary path or install ${selectedProxy}`;
     detectStatus.style.color = res.found ? 'var(--ok)' : 'var(--err)';
     if (res.found && res.source !== 'explicit' && !pathInput.value) {
       detectStatus.textContent += ' (auto-detect will use this)';
     }
   };
 
+  proxySelect.onchange = () => void runDetect();
+
   browseBtn.onclick = async () => {
     const picked = await api.pickExecutable();
-    if (picked) pathInput.value = picked;
+    if (picked) {
+      pathInput.value = picked;
+      void runDetect();
+    }
   };
   detectBtn.onclick = () => void runDetect();
   void runDetect();
@@ -617,6 +647,7 @@ function openSettings(): void {
     overlay.remove();
   };
   save.onclick = async () => {
+    config!.activeProxy = proxySelect.value;
     config!.headroomPath = pathInput.value.trim();
     config!.theme = themeSelect.value as ThemeMode;
     const seconds = Number(timeoutInput.value);
@@ -632,7 +663,7 @@ function openSettings(): void {
     }
   };
 
-  modal.append(title, pathField, timeoutField, themeField, actions);
+  modal.append(title, proxyField, pathField, timeoutField, themeField, actions);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
 }
@@ -645,16 +676,34 @@ function schedulePortCheck(): void {
   portCheckTimer = setTimeout(async () => {
     const input = el<HTMLInputElement>('fld-port');
     const status = el('port-status');
+    const killBtn = el<HTMLButtonElement>('btn-kill-port');
     const port = Number(input.value);
     if (!Number.isInteger(port) || port < 1 || port > 65535) {
       status.textContent = 'invalid port';
       status.style.color = 'var(--err)';
+      killBtn.classList.add('hidden');
       return;
     }
     const free = await api.checkPort(port);
-    status.textContent = free ? '✓ available' : '⚠ currently in use';
+    status.textContent = free ? 'available' : 'in use';
     status.style.color = free ? 'var(--ok)' : 'var(--warn)';
+    killBtn.classList.toggle('hidden', free);
   }, 350);
+}
+
+async function killPort(): Promise<void> {
+  const port = Number(el<HTMLInputElement>('fld-port').value);
+  if (!Number.isInteger(port)) return;
+  el<HTMLButtonElement>('btn-kill-port').disabled = true;
+  el<HTMLButtonElement>('btn-kill-port').textContent = 'Killing...';
+  const result = await api.killPort(port);
+  if (result.error) {
+    toast(`Failed to kill port ${port}: ${result.error}`, 'err');
+  } else {
+    toast(`Killed processes on port ${port}`);
+  }
+  await new Promise((r) => setTimeout(r, 500));
+  schedulePortCheck();
 }
 
 /* ================================ Init ================================= */
@@ -718,6 +767,7 @@ async function init(): Promise<void> {
     currentProfile().agentPath = '';
     el<HTMLInputElement>('fld-path').value = '';
   };
+  el('btn-kill-port').onclick = () => void killPort();
   el('btn-scan-agent').onclick = async () => {
     if (!selectedId) return;
     const result = await api.scanAgent(selectedId, el<HTMLInputElement>('fld-path').value.trim());

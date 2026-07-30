@@ -1,44 +1,87 @@
-# Token Zero Studio
+# TokenZero - Studio
 
-A professional, cross-platform desktop GUI for running every AI coding agent
-through the [Headroom](https://github.com) context-optimization proxy.
+A professional, zero-setup desktop GUI for connecting your pre-installed AI coding agents to token cost optimization proxies (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **LiteLLM**, **Custom**).
 
-Token Zero Studio wraps AI coding agents (Claude Code, Codex, Cline, Cursor, Goose,
-Grok, OpenCode, and more) to compress context and cut token spend. This app is a
-thin, friendly wrapper: it lists the supported agents, finds them on your
-system, gathers the configuration needed to run each one through Headroom, and
-launches them with a single click.
+TokenZero - Studio wraps your pre-installed AI coding agents to compress context and cut token spend across all major providers.
 
 ![Dark theme screenshot](assets/main_ui.png)
 
 ---
 
+## How it Differs from 9Router & OmniRouter
+
+Unlike projects such as **9Router** or **OmniRouter** (which act as complex API routers, LLM load balancers, or model gateway proxies requiring central server setups and API key routing configurations):
+
+- **Zero Setup & Zero Extra Downloads**: TokenZero - Studio is **not an LLM router**. You do not need to configure complex cloud proxy routes or download router daemons.
+- **Direct Local Launcher**: It is a lightweight desktop wrapper that detects **already pre-installed Coding Agents** on your system.
+- **Instant Proxy Binding**: It seamlessly attaches local token cost optimizers (**Headroom**, **RTK**, **PxPipe**, **LLMLingua**, **LiteLLM**, or any **Custom** proxy) to your agent's API environment (`OPENAI_BASE_URL` / `ANTHROPIC_BASE_URL`) and launches the agent in a single click.
+
+---
+
+## Supported AI Coding Agents
+
+TokenZero - Studio supports 18 pre-installed AI coding agents:
+
+- **Aider** — AI pair programming in your terminal
+- **Claude Code** — Anthropic's agentic coding CLI
+- **Cline** — Autonomous coding agent (VS Code extension / CLI)
+- **Continue** — Open-source AI code assistant
+- **Cursor** — AI-powered code editor
+- **GitHub Copilot CLI** — GitHub Copilot command-line interface
+- **Goose** — Open-source AI developer agent
+- **Grok CLI** — xAI Grok command-line agent
+- **Grok Build** — Grok project builder assistant
+- **Kimi CLI** — Moonshot AI Kimi coding agent
+- **Mistral Vibe** — Mistral AI coding assistant
+- **Oh My Pi** — Interactive terminal AI coding assistant
+- **OpenClaude** — Open-source Claude API agent CLI
+- **OpenClaw** — Open-source autonomous coding agent
+- **OpenCode** — AI terminal code generator
+- **OpenHands** — Open-source software development agent
+- **OpenAI Codex CLI** — OpenAI Codex agent CLI
+- **ZCode** — Intelligent desktop coding workspace
+
+---
+
 ## Features
 
-- **All 18 supported agents** in one list — Claude Code, OpenAI Codex CLI, Cline,
-  Continue, GitHub Copilot CLI, Cursor, Goose, Grok CLI, Grok Build, Kimi CLI,
-  Oh My Pi, OpenClaude, OpenClaw, OpenCode, OpenHands, Mistral Vibe, ZCode, Aider.
-- **Auto-detection** — scans `PATH` and well-known install locations; you can
-  also browse to an executable or paste an explicit path.
-- **Saved profiles** — per-agent, named configurations (path, port, mode,
-  memory/learning/lossless/passthrough toggles, extra args, env overrides,
-  working directory). Switch between them instantly.
-- **Live logs** — filterable, auto-scrolling log panel for proxy and agent
-  output.
-- **Per-agent ports** — unique default ports so several agents run at once;
-  live "available / in use" checks.
-- **Dark / Light / System** themes synced with the OS.
-- **Cross-platform** — Windows, macOS and Linux.
+- **Multiple Token Cost Optimizers** — Headroom (`pip install headroom-ai`), RTK (`brew install rtk`), PxPipe (`npx pxpipe-proxy`), LLMLingua (`pip install llmlingua`), LiteLLM (`pip install litellm`), and Custom proxies.
+- **Auto-detection** — Scans `PATH` and well-known install locations for both agents and proxy binaries.
+- **Saved Profiles** — Per-agent and per-proxy named configurations (path, port, mode, flags, extra args, env overrides, working directory).
+- **Per-Agent Ports** — Unique default ports so several agents run at once; live port-check and port-kill tools.
+
+---
 
 ## Requirements
 
 - [Node.js](https://nodejs.org/) 18+ (for development)
-- [Headroom](https://github.com) installed and on your `PATH`
-  (`pip install headroom-ai`) — the launcher detects it automatically.
-- One or more of the supported AI agents installed (e.g. `npm i -g @anthropic-ai/claude-code`,
-  `curl -LsSf https://codex-cli.ai/install.sh | sh`, etc.).
+- One of the supported token cost optimizers:
+  - **Headroom** (`pip install headroom-ai`)
+  - **PxPipe** (`npx pxpipe-proxy`)
+  - **RTK** (`brew install rtk` or curl installer)
+  - **LLMLingua** (`pip install llmlingua`)
+  - **LiteLLM** (`pip install litellm`)
+  - **Custom** local proxy binary
+- One or more of the supported AI agents pre-installed on your system.
 
-## Quick start
+---
+
+## Quick Start
+
+### One-Click Build & Run (All Platforms)
+
+- **Linux / macOS / Git Bash / WSL**:
+  ```bash
+  chmod +x build_and_run.sh
+  ./build_and_run.sh
+  ```
+
+- **Windows (Command Prompt / PowerShell)**:
+  ```cmd
+  build_and_run.bat
+  ```
+
+### Manual Quick Start
 
 ```bash
 git clone https://github.com/haseeb-heaven/token-zero-studio.git
@@ -48,49 +91,23 @@ npm run build     # bundles the Electron main, preload and renderer
 npm start         # launches the app
 ```
 
-### One-click build & run (Windows)
-
-Double-click `build_and_run.bat` to install dependencies (if missing), build the app and
-launch it in one step.
-
 ### Development
 
 ```bash
-npm run dev       # build (no watch) and launch Electron
+npm run dev       # build and launch Electron
 npm test          # run the unit-test suite
-npm run coverage  # run tests with a coverage report
 ```
 
-## How it works
+---
 
-1. The launcher starts `headroom proxy --port <port>` with your chosen flags.
-2. It waits for the proxy to answer (the first cold boot loads compression
-   models and can take ~40 s; the timeout is configurable in **Settings**).
-3. It launches the selected agent with `ANTHROPIC_BASE_URL` /
-   `OPENAI_BASE_URL` pointing at the local proxy, so all of the agent's API
-   traffic is optimized by Headroom.
-4. For IDE-extension agents (e.g. Continue) that can't be launched directly, it
-   starts the proxy and shows the manual configuration to paste in.
+## How It Works
 
-This mirrors exactly what the `run_*.cmd` / `run_*.sh` scripts in
-`Dev_HeadRoom_Commnands` do, but with a UI and no manual editing.
+1. The launcher starts your chosen token cost optimizer (`headroom`, `rtk`, `pxpipe`, `llmlingua`, `litellm`, or `custom`) on its configured port.
+2. It waits for the proxy to answer readiness checks.
+3. It launches the selected pre-installed agent with `ANTHROPIC_BASE_URL` / `OPENAI_BASE_URL` pointing at the local proxy, so all API traffic is compressed and optimized.
+4. For IDE-extension agents (e.g. Continue), it starts the proxy and displays manual configuration instructions.
 
-## Project structure
-
-```
-src/
-  core/        # pure, unit-tested business logic (agents, scanner, config, launcher, logger, theme)
-  shared/      # shared TypeScript types and the IPC channel map
-  main/        # Electron main process: window + IPC wiring
-  preload/     # context-bridge API exposed to the renderer
-  renderer/    # vanilla-TS UI (no framework bloat)
-tests/         # vitest unit tests (328 tests)
-scripts/       # build, smoke-test and end-to-end launch helpers
-assets/        # logo and screenshots
-```
-
-See [ARCHITECTURE.md](ARCHITECTURE.md) for a deeper dive into the design,
-the launch lifecycle and the security model.
+---
 
 ## Configuration
 
@@ -100,28 +117,21 @@ Settings are persisted as JSON in the user data folder:
 - **macOS**: `~/Library/Application Support/token-zero-studio/config.json`
 - **Linux**: `~/.config/token-zero-studio/config.json`
 
-A corrupt file is automatically backed up as `config.json.corrupt` and
-replaced with defaults.
+---
 
 ## Testing
-
-The project is developed test-first. The suite covers:
-
-- the agent registry (all 18 agents, unique ports, valid metadata),
-- per-agent env wiring, launch plans, terminal commands and scanning,
-- the cross-platform scanner (PATH + well-known locations + explicit paths),
-- config persistence, validation and corruption recovery,
-- the process manager lifecycle (start / proxy-ready / stop / cleanup),
-- theme resolution and config merging.
 
 ```bash
 npm test
 ```
 
+---
+
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow, coding
-conventions and how to add a new agent to the registry.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow and how to add new agents or proxies.
+
+---
 
 ## License
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { getAgent } from '../src/core/agents';
 import { defaultProfile } from '../src/core/config';
+import { getProxy } from '../src/core/proxies/registry';
 import {
   FetchFn,
   ProcessManager,
@@ -13,8 +14,8 @@ import {
   quoteArg,
   resolveAgentBinary,
   splitArgs,
-  waitForProxyReady,
 } from '../src/core/launcher';
+import { ProxyManager, waitForProxyReady } from '../src/core/proxy-manager';
 import { Logger } from '../src/core/logger';
 import type { ScanResult } from '../src/shared/types';
 
@@ -31,10 +32,12 @@ describe('splitArgs', () => {
 });
 
 describe('buildProxyArgs', () => {
+  const headroom = getProxy('headroom');
+
   it('builds the full flag set from a profile', () => {
-    const p = { ...defaultProfile('codex'), port: 8787, mode: 'token' as const };
-    expect(buildProxyArgs(p)).toEqual([
-      'proxy', '--port', '8787', '--mode', 'token', '--memory', '--learn',
+    const p = { ...defaultProfile('codex'), port: 8989, mode: 'token' as const };
+    expect(buildProxyArgs(headroom, p)).toEqual([
+      'proxy', '--port', '8989', '--mode', 'token', '--memory', '--learn',
     ]);
   });
 
@@ -47,7 +50,7 @@ describe('buildProxyArgs', () => {
       noOptimize: true,
       extraProxyArgs: '--rpm 120 --no-cache',
     };
-    expect(buildProxyArgs(p)).toEqual([
+    expect(buildProxyArgs(headroom, p)).toEqual([
       'proxy', '--port', '8798', '--mode', 'cache', '--no-optimize', '--lossless',
       '--rpm', '120', '--no-cache',
     ]);
@@ -55,20 +58,22 @@ describe('buildProxyArgs', () => {
 });
 
 describe('buildAgentEnv', () => {
+  const headroom = getProxy('headroom');
+
   it('sets ANTHROPIC_BASE_URL for anthropic-style agents (no /v1)', () => {
-    const env = buildAgentEnv(getAgent('claude'), { ...defaultProfile('claude'), port: 8798 });
+    const env = buildAgentEnv(getAgent('claude'), { ...defaultProfile('claude'), port: 8798 }, headroom);
     expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:8798');
     expect(env.OPENAI_BASE_URL).toBeUndefined();
   });
 
   it('sets OPENAI_BASE_URL with /v1 for openai-style agents', () => {
-    const env = buildAgentEnv(getAgent('codex'), { ...defaultProfile('codex'), port: 8787 });
-    expect(env.OPENAI_BASE_URL).toBe('http://127.0.0.1:8787/v1');
+    const env = buildAgentEnv(getAgent('codex'), { ...defaultProfile('codex'), port: 8989 }, headroom);
+    expect(env.OPENAI_BASE_URL).toBe('http://127.0.0.1:8989/v1');
     expect(env.ANTHROPIC_BASE_URL).toBeUndefined();
   });
 
   it('sets both for dual-style agents (matches run_grok/run_cline scripts)', () => {
-    const env = buildAgentEnv(getAgent('grok'), { ...defaultProfile('grok'), port: 8791 });
+    const env = buildAgentEnv(getAgent('grok'), { ...defaultProfile('grok'), port: 8791 }, headroom);
     expect(env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:8791');
     expect(env.OPENAI_BASE_URL).toBe('http://127.0.0.1:8791/v1');
   });
@@ -80,7 +85,7 @@ describe('buildAgentEnv', () => {
       learn: false,
       envOverrides: { ANTHROPIC_BASE_URL: 'http://custom:1', EXTRA: 'yes' },
     };
-    const env = buildAgentEnv(getAgent('cline'), p);
+    const env = buildAgentEnv(getAgent('cline'), p, headroom);
     expect(env.HEADROOM_MEMORY).toBe('true');
     expect(env.HEADROOM_LEARN).toBeUndefined();
     expect(env.ANTHROPIC_BASE_URL).toBe('http://custom:1');
@@ -108,33 +113,35 @@ describe('resolveAgentBinary', () => {
 });
 
 describe('buildLaunchPlan', () => {
+  const headroom = getProxy('headroom');
+
   it('assembles a complete plan', () => {
     const p = { ...defaultProfile('codex'), extraAgentArgs: '--resume "abc 1"' };
-    const plan = buildLaunchPlan(getAgent('codex'), p, '/hb/headroom', '/usr/bin/codex');
+    const plan = buildLaunchPlan(getAgent('codex'), p, headroom, '/hb/headroom', '/usr/bin/codex');
     expect(plan.agentId).toBe('codex');
     expect(plan.headroomBin).toBe('/hb/headroom');
     expect(plan.proxyArgs[0]).toBe('proxy');
     expect(plan.agentBin).toBe('/usr/bin/codex');
     expect(plan.agentArgs).toEqual(['--resume', 'abc 1']);
-    expect(plan.env.OPENAI_BASE_URL).toBe('http://127.0.0.1:8787/v1');
+    expect(plan.env.OPENAI_BASE_URL).toBe('http://127.0.0.1:8989/v1');
     expect(plan.strategy).toBe('env');
   });
 
   it('throws for env-strategy agents without a binary', () => {
-    expect(() => buildLaunchPlan(getAgent('codex'), defaultProfile('codex'), '/hb/headroom', null)).toThrow(
+    expect(() => buildLaunchPlan(getAgent('codex'), defaultProfile('codex'), headroom, '/hb/headroom', null)).toThrow(
       /requires an executable/,
     );
   });
 
   it('allows instructions-strategy agents without a binary', () => {
-    const plan = buildLaunchPlan(getAgent('continue'), defaultProfile('continue'), '/hb/headroom', null);
+    const plan = buildLaunchPlan(getAgent('continue'), defaultProfile('continue'), headroom, '/hb/headroom', null);
     expect(plan.strategy).toBe('instructions');
     expect(plan.agentBin).toBe('');
   });
 
   it('uses the configured working directory', () => {
     const p = { ...defaultProfile('codex'), workingDirectory: 'D:\\Code\\proj' };
-    const plan = buildLaunchPlan(getAgent('codex'), p, '/hb/headroom', '/usr/bin/codex');
+    const plan = buildLaunchPlan(getAgent('codex'), p, headroom, '/hb/headroom', '/usr/bin/codex');
     expect(plan.cwd).toBe('D:\\Code\\proj');
   });
 });
@@ -149,9 +156,11 @@ describe('quoteArg', () => {
 });
 
 describe('buildTerminalCommand', () => {
+  const headroom = getProxy('headroom');
   const plan = buildLaunchPlan(
     getAgent('codex'),
     { ...defaultProfile('codex'), workingDirectory: '/work' },
+    headroom,
     '/hb/headroom',
     '/usr/bin/codex',
   );
@@ -164,7 +173,7 @@ describe('buildTerminalCommand', () => {
     expect(t.args[1]).toBe('start');
     expect(t.args).toContain('/D');
     expect(t.args).toContain('D:\\work');
-    expect(t.args[t.args.length - 1]).toContain('"C:\\bin\\codex.exe"');
+    expect(t.args[t.args.length - 1]).toContain('C:\\bin\\codex.exe');
   });
 
   it('uses osascript Terminal on macOS with exported env', () => {
@@ -197,12 +206,12 @@ describe('waitForProxyReady', () => {
       if (calls < 3) throw new Error('ECONNREFUSED');
       return { status: 200 };
     };
-    expect(await waitForProxyReady(8787, 5000, fetch, noSleep)).toBe(true);
+    expect(await waitForProxyReady(8989, 5000, fetch, noSleep)).toBe(true);
   });
 
   it('any HTTP status counts as ready (404 on /livez is fine)', async () => {
     const fetch: FetchFn = async () => ({ status: 404 });
-    expect(await waitForProxyReady(8787, 1000, fetch, noSleep)).toBe(true);
+    expect(await waitForProxyReady(8989, 1000, fetch, noSleep)).toBe(true);
   });
 
   it('times out when nothing answers', async () => {
@@ -210,7 +219,7 @@ describe('waitForProxyReady', () => {
       throw new Error('ECONNREFUSED');
     };
     const t0 = Date.now();
-    expect(await waitForProxyReady(8787, 300, fetch, noSleep, 50)).toBe(false);
+    expect(await waitForProxyReady(8989, 300, fetch, noSleep, 50)).toBe(false);
     expect(Date.now() - t0).toBeGreaterThanOrEqual(250);
   });
 });
@@ -247,20 +256,28 @@ const failFetch: FetchFn = async () => {
 };
 const noSleep = () => Promise.resolve();
 
+const headroom = getProxy('headroom');
+
 function makePlan(agentId = 'codex') {
   const agent = getAgent(agentId);
   const profile = defaultProfile(agentId);
-  return buildLaunchPlan(agent, profile, '/hb/headroom', agent.launchStrategy === 'env' ? '/usr/bin/' + agentId : null);
+  return buildLaunchPlan(agent, profile, headroom, '/hb/headroom', agent.launchStrategy === 'env' ? '/usr/bin/' + agentId : null);
+}
+
+function makeProxyManager(spawn?: SpawnFn, fetch: FetchFn = readyFetch) {
+  const s = spawn ?? fakeSpawn().spawn;
+  return new ProxyManager({ spawn: s, fetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
 }
 
 describe('ProcessManager', () => {
   it('runs the full lifecycle: starting -> proxy-up -> running, spawning proxy then agent terminal', async () => {
     const { spawn, spawned } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm' });
+    const proxyManager = makeProxyManager(spawn);
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
     const states: string[] = [];
     pm.onRuntimeChange((r) => states.push(r.state));
 
-    const runtime = await pm.start(makePlan(), 'Codex', 5000);
+    const runtime = await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     expect(runtime.state).toBe('running');
     expect(spawned[0].cmd).toBe('/hb/headroom');
     expect(spawned[0].args[0]).toBe('proxy');
@@ -270,30 +287,34 @@ describe('ProcessManager', () => {
 
   it('stops at proxy-up for instructions-strategy agents and never spawns an agent', async () => {
     const { spawn, spawned } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
-    const runtime = await pm.start(makePlan('continue'), 'Continue', 5000);
+    const proxyManager = makeProxyManager(spawn);
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', proxyManager });
+    const runtime = await pm.start(makePlan('continue'), headroom, '/hb/headroom', headroom.defaultFlags, 'Continue', 5000);
     expect(runtime.state).toBe('proxy-up');
     expect(spawned.length).toBe(1);
   });
 
   it('fails with cleanup when the proxy never becomes ready', async () => {
     const { spawn } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: failFetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
-    await expect(pm.start(makePlan(), 'Codex', 300)).rejects.toThrow(/did not become ready/);
+    const proxyManager = makeProxyManager(spawn, failFetch);
+    const pm = new ProcessManager({ spawn, fetch: failFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', proxyManager });
+    await expect(pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 300)).rejects.toThrow(/did not become ready/);
     expect(pm.runtimeFor('codex').state).toBe('error');
   });
 
   it('refuses to start twice while running', async () => {
     const { spawn } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm' });
-    await pm.start(makePlan(), 'Codex', 5000);
-    await expect(pm.start(makePlan(), 'Codex', 5000)).rejects.toThrow(/already/);
+    const proxyManager = makeProxyManager();
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
+    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await expect(pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000)).rejects.toThrow(/already/);
   });
 
   it('stop kills agent and proxy and reports stopped', async () => {
     const { spawn } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm' });
-    await pm.start(makePlan(), 'Codex', 5000);
+    const proxyManager = makeProxyManager();
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
+    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     const stopped = pm.stop('codex');
     expect(stopped.state).toBe('stopped');
     expect(pm.runtimeFor('codex').state).toBe('stopped');
@@ -301,15 +322,17 @@ describe('ProcessManager', () => {
 
   it('stop on an unknown agent is a no-op', () => {
     const { spawn } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
+    const proxyManager = makeProxyManager();
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', proxyManager });
     expect(pm.stop('ghost').state).toBe('stopped');
   });
 
   it('stopAll stops every running agent', async () => {
     const { spawn } = fakeSpawn();
-    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm' });
-    await pm.start(makePlan('codex'), 'Codex', 5000);
-    await pm.start(makePlan('claude'), 'Claude', 5000);
+    const proxyManager = makeProxyManager();
+    const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
+    await pm.start(makePlan('codex'), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await pm.start(makePlan('claude'), headroom, '/hb/headroom', headroom.defaultFlags, 'Claude', 5000);
     pm.stopAll();
     expect(pm.runtimeFor('codex').state).toBe('stopped');
     expect(pm.runtimeFor('claude').state).toBe('stopped');
@@ -329,8 +352,9 @@ describe('ProcessManager', () => {
       }
       return proc;
     };
-    const pm = new ProcessManager({ spawn: wrappedSpawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm' });
-    await pm.start(makePlan(), 'Codex', 5000);
+    const proxyManager = new ProxyManager({ spawn: wrappedSpawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
+    const pm = new ProcessManager({ spawn: wrappedSpawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
+    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     exitCb?.(1);
     expect(pm.runtimeFor('codex').state).toBe('stopped');
   });

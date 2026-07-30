@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-click build and run for Token Zero Studio
+# One-click build and run for TokenZero - Studio
 # Works on Linux, macOS, and Windows (Git Bash / WSL)
 set -euo pipefail
 
@@ -14,9 +14,9 @@ fi
 
 echo ""
 echo "[2/3] Building the app..."
-node scripts/build.mjs
+npm run build
 
 echo ""
-echo "[3/3] Launching Token Zero Studio..."
+echo "[3/3] Launching TokenZero - Studio..."
 echo ""
 npm start

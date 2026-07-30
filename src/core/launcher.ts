@@ -4,10 +4,13 @@ import type {
   AgentRuntime,
   LaunchPlan,
   PlatformName,
+  ProxyFlags,
   RunState,
   ScanResult,
 } from '../shared/types';
+import type { ProxyDefinition } from './proxies/types';
 import type { Logger } from './logger';
+import type { ProxyManager } from './proxy-manager';
 
 /* ------------------------------------------------------------------ */
 /* Pure plan builders (unit-tested, no side effects)                   */
@@ -24,29 +27,36 @@ export function splitArgs(raw: string): string[] {
   return out;
 }
 
-/** Arguments for `headroom proxy ...` derived from a profile. */
-export function buildProxyArgs(profile: AgentProfile): string[] {
-  const args: string[] = ['proxy', '--port', String(profile.port), '--mode', profile.mode];
-  if (profile.noOptimize) args.push('--no-optimize');
-  if (profile.lossless) args.push('--lossless');
-  if (profile.memory) args.push('--memory');
-  if (profile.learn) args.push('--learn');
-  args.push(...splitArgs(profile.extraProxyArgs));
-  return args;
+/** Arguments for the proxy start command derived from a profile and definition. */
+export function buildProxyArgs(def: ProxyDefinition, profile: AgentProfile): string[] {
+  const flags = {
+    mode: profile.mode,
+    memory: profile.memory,
+    learn: profile.learn,
+    lossless: profile.lossless,
+    noOptimize: profile.noOptimize,
+    extraArgs: profile.extraProxyArgs,
+  };
+  return def.buildStartArgs(profile.port, flags);
 }
 
 /** Environment variables the agent process receives. */
-export function buildAgentEnv(agent: AgentDefinition, profile: AgentProfile): Record<string, string> {
+export function buildAgentEnv(agent: AgentDefinition, profile: AgentProfile, proxyDef: ProxyDefinition): Record<string, string> {
   const env: Record<string, string> = {};
   const base = `http://127.0.0.1:${profile.port}`;
+  // Use the agent's envStyle to determine which base URL vars to set —
+  // the agent only reads the ones it knows about.
   if (agent.envStyle === 'anthropic' || agent.envStyle === 'both') {
     env.ANTHROPIC_BASE_URL = base;
   }
   if (agent.envStyle === 'openai' || agent.envStyle === 'both') {
     env.OPENAI_BASE_URL = `${base}/v1`;
   }
-  if (profile.memory) env.HEADROOM_MEMORY = 'true';
-  if (profile.learn) env.HEADROOM_LEARN = 'true';
+  // Headroom-specific env vars (only relevant for headroom proxy)
+  if (proxyDef.id === 'headroom') {
+    if (profile.memory) env.HEADROOM_MEMORY = 'true';
+    if (profile.learn) env.HEADROOM_LEARN = 'true';
+  }
   for (const [key, value] of Object.entries(profile.envOverrides)) {
     env[key] = value;
   }
@@ -71,7 +81,8 @@ export function resolveAgentBinary(
 export function buildLaunchPlan(
   agent: AgentDefinition,
   profile: AgentProfile,
-  headroomBin: string,
+  proxyDef: ProxyDefinition,
+  proxyBin: string,
   agentBin: string | null,
 ): LaunchPlan {
   if (agent.launchStrategy === 'env' && (!agentBin || agentBin.length === 0)) {
@@ -82,11 +93,11 @@ export function buildLaunchPlan(
   return {
     agentId: agent.id,
     port: profile.port,
-    headroomBin,
-    proxyArgs: buildProxyArgs(profile),
+    headroomBin: proxyBin,
+    proxyArgs: buildProxyArgs(proxyDef, profile),
     agentBin: agentBin ?? '',
     agentArgs: [...agent.defaultArgs, ...splitArgs(profile.extraAgentArgs)],
-    env: buildAgentEnv(agent, profile),
+    env: buildAgentEnv(agent, profile, proxyDef),
     cwd: profile.workingDirectory.trim().length > 0 ? profile.workingDirectory.trim() : '.',
     strategy: agent.launchStrategy,
   };
@@ -95,7 +106,12 @@ export function buildLaunchPlan(
 /** Quote one argument for a shell/cmd command line. */
 export function quoteArg(value: string, platform: PlatformName): string {
   if (platform === 'win32') {
-    return `"${value.replace(/"/g, '\\"')}"`;
+    if (!value) return '""';
+    if (value.startsWith('"') && value.endsWith('"')) return value;
+    if (/[ &()^=;!%+,\s]/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return value;
   }
   return `'${value.replace(/'/g, `'\\''`)}'`;
 }
@@ -116,7 +132,7 @@ export interface TerminalCommand {
  */
 export function buildTerminalCommand(
   plan: LaunchPlan,
-  agentName: string,
+  _agentName: string,
   platform: PlatformName,
   opts: { terminal?: string } = {},
 ): TerminalCommand {
@@ -126,7 +142,7 @@ export function buildTerminalCommand(
     // Environment is inherited through the spawn env of cmd.exe -> start.
     return {
       cmd: 'cmd.exe',
-      args: ['/c', 'start', `"Headroom \u2014 ${agentName}"`, '/D', plan.cwd, 'cmd', '/k', binLine],
+      args: ['/c', 'start', '""', '/D', plan.cwd, 'cmd', '/k', binLine],
     };
   }
 
@@ -179,32 +195,8 @@ export interface ProcessManagerDeps {
   platform: PlatformName;
   /** Linux terminal emulator to use (resolved by caller). */
   terminal?: string;
-}
-
-const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
-
-/** Poll the proxy until it answers HTTP (any status) or the timeout elapses. */
-export async function waitForProxyReady(
-  port: number,
-  timeoutMs: number,
-  fetchImpl: FetchFn,
-  sleep: (ms: number) => Promise<void> = defaultSleep,
-  intervalMs = 250,
-): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  const urls = [`http://127.0.0.1:${port}/livez`, `http://127.0.0.1:${port}/healthz`];
-  while (Date.now() < deadline) {
-    for (const url of urls) {
-      try {
-        await fetchImpl(url);
-        return true; // any HTTP response means the server is up
-      } catch {
-        /* connection refused — keep polling */
-      }
-    }
-    await sleep(intervalMs);
-  }
-  return false;
+  /** Proxy manager for starting/stopping the proxy process. */
+  proxyManager: ProxyManager;
 }
 
 interface RunningEntry {
@@ -220,10 +212,19 @@ interface RunningEntry {
 export class ProcessManager {
   private entries = new Map<string, RunningEntry>();
   private listeners = new Set<(runtime: AgentRuntime) => void>();
-  private readonly sleep: (ms: number) => Promise<void>;
 
   constructor(private readonly deps: ProcessManagerDeps) {
-    this.sleep = deps.sleep ?? defaultSleep;
+    deps.proxyManager.onRuntimeChange((agentId, proxyRuntime) => {
+      const entry = this.entries.get(agentId);
+      if (entry && entry.runtime.state !== 'stopped' && entry.runtime.state !== 'error') {
+        if (proxyRuntime.state === 'stopped' || proxyRuntime.state === 'error') {
+          entry.runtime.state = proxyRuntime.state === 'error' ? 'error' : 'stopped';
+          if (proxyRuntime.error) entry.runtime.error = proxyRuntime.error;
+          entry.runtime.proxyPid = undefined;
+          this.emit(entry);
+        }
+      }
+    });
   }
 
   onRuntimeChange(listener: (runtime: AgentRuntime) => void): () => void {
@@ -243,7 +244,14 @@ export class ProcessManager {
    * Start proxy + agent. Resolves once the agent is running (or the proxy is
    * up for 'instructions' agents). Rejects on failure with cleanup done.
    */
-  async start(plan: LaunchPlan, agentName: string, startupTimeoutMs: number): Promise<AgentRuntime> {
+  async start(
+    plan: LaunchPlan,
+    proxyDef: ProxyDefinition,
+    proxyBin: string,
+    proxyFlags: ProxyFlags,
+    agentName: string,
+    startupTimeoutMs: number,
+  ): Promise<AgentRuntime> {
     const existing = this.entries.get(plan.agentId);
     if (existing && existing.runtime.state !== 'stopped' && existing.runtime.state !== 'error') {
       throw new Error(`${agentName} is already ${existing.runtime.state}`);
@@ -255,39 +263,21 @@ export class ProcessManager {
     this.entries.set(plan.agentId, entry);
     this.emit(entry);
 
-    // 1. Headroom proxy
+    // 1. Proxy (via ProxyManager)
     try {
-      entry.proxy = this.deps.spawn(plan.headroomBin, plan.proxyArgs, {
-        env: {},
-        cwd: plan.cwd === '.' ? process.cwd() : plan.cwd,
-      });
+      await this.deps.proxyManager.start(plan.agentId, proxyDef, proxyBin, plan.port, proxyFlags, startupTimeoutMs);
     } catch (err) {
-      return this.fail(entry, `Failed to start Headroom proxy: ${String(err)}`);
+      return this.fail(entry, `Failed to start ${proxyDef.name} proxy: ${String(err)}`);
     }
-    entry.runtime.proxyPid = entry.proxy.pid;
-    this.pipeLogs(entry.proxy, 'proxy', agentName);
-    entry.proxy.on('exit', (code) => {
-      this.deps.logger.warn('proxy', `Headroom proxy for ${agentName} exited (code ${String(code)})`);
-      const s = entry.runtime.state;
-      if (s !== 'stopping' && s !== 'stopped' && s !== 'error') {
-        entry.runtime.state = 'stopped';
-        entry.runtime.proxyPid = undefined;
-        entry.runtime.agentPid = undefined;
-        this.emit(entry);
-      }
-    });
-    entry.proxy.on('error', (err) => {
-      void this.fail(entry, `Headroom proxy error: ${String(err)}`);
-    });
+    entry.runtime.port = plan.port;
+    entry.runtime.proxyPid = this.deps.proxyManager.runtimeFor(plan.agentId).pid;
 
-    // 2. Wait until the proxy answers
-    const ready = await waitForProxyReady(plan.port, startupTimeoutMs, this.deps.fetch, this.sleep);
-    if (!ready) {
-      return this.fail(entry, `Headroom proxy did not become ready on port ${plan.port} within ${startupTimeoutMs}ms`);
+    // 2. Wait for proxy-up state (wrapper mode resolves immediately)
+    if (this.deps.proxyManager.runtimeFor(plan.agentId).state === 'up') {
+      entry.runtime.state = 'proxy-up';
+      this.emit(entry);
+      this.deps.logger.info('proxy', `${proxyDef.name} proxy ready on http://127.0.0.1:${plan.port}`);
     }
-    entry.runtime.state = 'proxy-up';
-    this.emit(entry);
-    this.deps.logger.info('proxy', `Headroom proxy ready on http://127.0.0.1:${plan.port}`);
 
     // 3. Agent (unless the strategy only needs the proxy running)
     if (plan.strategy === 'instructions') {
@@ -329,7 +319,7 @@ export class ProcessManager {
       /* already gone */
     }
     try {
-      entry.proxy?.kill();
+      this.deps.proxyManager.stop(agentId);
     } catch {
       /* already gone */
     }
@@ -344,6 +334,7 @@ export class ProcessManager {
     for (const agentId of this.entries.keys()) {
       this.stop(agentId);
     }
+    this.deps.proxyManager.stopAll();
   }
 
   private spawnAgent(plan: LaunchPlan, agentName: string): SpawnedProcess {
@@ -357,18 +348,22 @@ export class ProcessManager {
         plan.agentId,
         `Launching ${agentName}: ${terminalCmd.cmd} ${terminalCmd.args.join(' ')}`,
       );
-      return this.deps.spawn(terminalCmd.cmd, terminalCmd.args, {
+      const proc = this.deps.spawn(terminalCmd.cmd, terminalCmd.args, {
         env: plan.env,
         cwd: plan.cwd,
         detached: true,
       });
+      this.pipeLogs(proc, plan.agentId, agentName);
+      return proc;
     }
     this.deps.logger.info(plan.agentId, `Launching ${agentName}: ${plan.agentBin} ${plan.agentArgs.join(' ')}`);
-    return this.deps.spawn(plan.agentBin, plan.agentArgs, {
+    const proc = this.deps.spawn(plan.agentBin, plan.agentArgs, {
       env: plan.env,
       cwd: plan.cwd,
       detached: true,
     });
+    this.pipeLogs(proc, plan.agentId, agentName);
+    return proc;
   }
 
   private pipeLogs(proc: SpawnedProcess, source: string, agentName: string): void {
@@ -390,7 +385,7 @@ export class ProcessManager {
       /* ignore */
     }
     try {
-      entry.proxy?.kill();
+      this.deps.proxyManager.stop(entry.runtime.agentId);
     } catch {
       /* ignore */
     }

@@ -74,7 +74,7 @@ describe('agent registry', () => {
   });
 
   it('matches the Dev_HeadRoom_Commnands scripts: claude/codex/cline/grok ports and env styles', () => {
-    expect(getAgent('codex').defaultPort).toBe(8787); // run_codex.cmd uses 8787
+    expect(getAgent('codex').defaultPort).toBe(8989); // updated to 8989 to avoid port 8787 conflict
     expect(getAgent('claude').defaultPort).toBe(8798); // run_claude.cmd uses 8798
     expect(getAgent('codex').envStyle).toBe('openai'); // OPENAI_BASE_URL only
     expect(getAgent('claude').envStyle).toBe('anthropic'); // ANTHROPIC_BASE_URL only

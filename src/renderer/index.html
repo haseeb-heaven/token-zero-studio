@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
-  <title>TokenZeroStudio</title>
+  <title>TokenZero - Studio</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,15 +11,15 @@
     <!-- ======================= Header ======================= -->
     <header id="topbar">
       <div class="brand">
-        <img src="../assets/logo.svg" alt="Headroom logo" class="brand-logo" />
+        <img src="../assets/logo.svg" alt="TokenZero logo" class="brand-logo" />
         <div class="brand-text">
-          <h1>TokenZeroStudio</h1>
-          <span class="brand-sub">Context optimization proxy for every AI coding agent</span>
+          <h1>TokenZero - Studio</h1>
+          <span class="brand-sub">Context optimization proxy launcher for AI coding agents</span>
         </div>
       </div>
       <div class="topbar-status">
-        <div id="headroom-status" class="pill pill-unknown" title="Headroom CLI detection">
-          <span class="dot"></span><span id="headroom-status-text">Detecting Headroom…</span>
+        <div id="headroom-status" class="pill pill-unknown" title="Token Optimizer detection">
+          <span class="dot"></span><span id="headroom-status-text">Detecting Proxy…</span>
         </div>
         <button id="btn-scan-all" class="btn btn-ghost" title="Scan the system for all supported agents">
           <svg viewBox="0 0 16 16" class="icon"><path d="M11.7 10.3a5.5 5.5 0 1 0-1.4 1.4l3 3a1 1 0 0 0 1.4-1.4l-3-3zM7 11a4 4 0 1 1 0-8 4 4 0 0 1 0 8z" fill="currentColor"/></svg>
@@ -29,7 +29,7 @@
           <svg viewBox="0 0 16 16" class="icon"><path d="M2 3h12v2H2zM2 7h12v2H2zM2 11h8v2H2z" fill="currentColor"/></svg>
           Logs
         </button>
-        <button id="btn-settings" class="btn btn-ghost" title="Headroom settings">
+        <button id="btn-settings" class="btn btn-ghost" title="Studio settings">
           <svg viewBox="0 0 16 16" class="icon"><path d="M8 5.2A2.8 2.8 0 1 0 8 10.8 2.8 2.8 0 0 0 8 5.2zm0 4A1.2 1.2 0 1 1 8 6.8a1.2 1.2 0 0 1 0 2.4z" fill="currentColor"/><path d="M13.9 8.9l1.4 1.1-1.3 2.2-1.6-.7a5.9 5.9 0 0 1-1.2.7L10.9 14H8.4l-.3-1.8a5.9 5.9 0 0 1-1.2-.7l-1.6.7L4 10l1.4-1.1a6.2 6.2 0 0 1 0-1.4L4 6.4l1.3-2.2 1.6.7a5.9 5.9 0 0 1 1.2-.7L8.4 2.4h2.5l.3 1.8a5.9 5.9 0 0 1 1.2.7l1.6-.7L15.3 6l-1.4 1.1a6.2 6.2 0 0 1 0 1.4z" fill="currentColor" transform="scale(0.94) translate(0.5,0.3)"/></svg>
           Settings
         </button>
@@ -51,7 +51,7 @@
         <div id="detail-empty" class="empty-state">
           <img src="../assets/logo.svg" alt="" class="empty-logo" />
           <h2>Select an agent</h2>
-          <p>Pick a supported AI agent on the left, configure its path and proxy settings, then launch it through Headroom.</p>
+          <p>Pick a supported AI agent on the left, configure its path and proxy settings, then launch it through your selected token optimizer.</p>
         </div>
 
         <div id="detail-content" class="hidden">
@@ -101,6 +101,7 @@
                 <label for="fld-port">Proxy port</label>
                 <input id="fld-port" type="number" min="1" max="65535" />
                 <span id="port-status" class="small muted"></span>
+                <button id="btn-kill-port" class="btn btn-danger-ghost small-btn hidden" title="Kill processes on this port">Kill port</button>
               </div>
               <div class="field">
                 <label for="fld-workdir">Working directory</label>
@@ -119,10 +120,10 @@
             </div>
           </section>
 
-          <!-- Headroom proxy options -->
+          <!-- Token Optimizer proxy options -->
           <section class="card">
-            <h3>Headroom proxy</h3>
-            <div class="grid-2">
+            <h3 id="proxy-card-heading">Token Optimizer Proxy</h3>
+            <div id="headroom-options-row" class="grid-2">
               <div class="field">
                 <label for="fld-mode">Optimization mode</label>
                 <select id="fld-mode">
@@ -159,7 +160,7 @@
 
           <!-- Launch bar -->
           <section class="launch-bar">
-            <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch through Headroom</button>
+            <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch with Token Optimizer</button>
             <button id="btn-stop" class="btn btn-danger hidden">■ Stop</button>
             <span id="launch-status" class="muted"></span>
             <span class="flex-spacer"></span>

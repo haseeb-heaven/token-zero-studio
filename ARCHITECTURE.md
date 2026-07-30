@@ -20,15 +20,17 @@ All shared types and the `IPC` channel map. Both the preload bridge and the
 main-process handlers import from here, so channel names can never drift.
 
 ### `src/core/*` — pure, framework-free logic
-| Module       | Responsibility |
-|--------------|----------------|
-| `agents.ts`  | Registry of all 18 supported agents with cross-platform metadata (executables, well-known paths, env style, default port). |
-| `platform.ts`| `PATH` splitting, executable-name expansion per OS, `~`/`%VAR%` expansion, path joining, comparison normalisation. |
-| `scanner.ts` | Detects an agent on `PATH`, in well-known locations, or at an explicit path. Never throws. |
-| `config.ts`  | `ConfigStore` (JSON persistence), profile validation, corruption recovery, config merging. |
-| `launcher.ts`| Pure plan builders (`buildProxyArgs`, `buildAgentEnv`, `buildLaunchPlan`, `buildTerminalCommand`) + `ProcessManager` (injectable spawn/fetch/sleep). |
-| `logger.ts`  | Ring-buffer logger with subscription. |
-| `theme.ts`   | Theme-mode resolution (`system`/`dark`/`light`) and OS sync. |
+| Module            | Responsibility |
+|-------------------|----------------|
+| `agents.ts`       | Registry of all 18 supported agents with cross-platform metadata (executables, well-known paths, env style, default port). |
+| `proxies/`        | Registry of token-optimisation proxies (`Headroom`, `PxPipe`, `RTK`, `Custom`) with start flags and env styles. |
+| `proxy-manager.ts`| Owns lifecycle of server and wrapper mode proxies per agentId with ready-state polling. |
+| `platform.ts`     | `PATH` splitting, executable-name expansion per OS, `~`/`%VAR%` expansion, path joining, comparison normalisation. |
+| `scanner.ts`      | Detects agents and proxies on `PATH`, in well-known locations, or at explicit paths. Never throws. |
+| `config.ts`       | `ConfigStore` (JSON persistence), profile validation, corruption recovery, config merging. |
+| `launcher.ts`     | Pure plan builders (`buildProxyArgs`, `buildAgentEnv`, `buildLaunchPlan`, `buildTerminalCommand`) + `ProcessManager` (injectable spawn/fetch/sleep). |
+| `logger.ts`       | Ring-buffer logger with subscription. |
+| `theme.ts`        | Theme-mode resolution (`system`/`dark`/`light`) and OS sync. |
 
 These modules depend only on `shared/types` and on each other — never on
 Electron or Node — which is why they have 328 unit tests.

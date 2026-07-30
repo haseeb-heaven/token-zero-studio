@@ -44,7 +44,7 @@ export const AGENTS: AgentDefinition[] = [
     envStyle: 'openai',
     defaultArgs: [],
     configFileHint: '~/.codex/config.toml',
-    defaultPort: 8787,
+    defaultPort: 8989,
     accent: '#10a37f',
     homepage: 'https://github.com/openai/codex',
   },

@@ -1,6 +1,7 @@
 import { AGENTS, getAgent } from './agents';
+import { PROXIES, getProxy } from './proxies/registry';
 import { isThemeMode } from './theme';
-import type { AgentConfig, AgentProfile, AppConfig } from '../shared/types';
+import type { AgentConfig, AgentProfile, AppConfig, ProxyProfile } from '../shared/types';
 
 export const DEFAULT_PROFILE_NAME = 'Default';
 /** First proxy boot loads compression models and can easily exceed 30s. */
@@ -22,6 +23,18 @@ export function defaultProfile(agentId: string, name = DEFAULT_PROFILE_NAME): Ag
     extraAgentArgs: '',
     envOverrides: {},
     workingDirectory: '',
+  };
+}
+
+/** Create a fresh proxy profile pre-filled with a proxy's defaults. */
+export function defaultProxyProfile(proxyId: string, name = DEFAULT_PROFILE_NAME): ProxyProfile {
+  const proxy = getProxy(proxyId);
+  return {
+    name,
+    proxyPath: '',
+    port: proxy.defaultPort,
+    flags: { ...proxy.defaultFlags },
+    envOverrides: {},
   };
 }
 
@@ -51,6 +64,12 @@ export function defaultConfig(): AppConfig {
     headroomPath: '',
     proxyStartupTimeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
     theme: 'system',
+    activeProxy: 'headroom',
+    proxies: PROXIES.map((proxy) => ({
+      proxyId: proxy.id,
+      profiles: [defaultProxyProfile(proxy.id)],
+      activeProfile: DEFAULT_PROFILE_NAME,
+    })),
     agents: AGENTS.map((agent) => ({
       agentId: agent.id,
       profiles: [defaultProfile(agent.id)],
@@ -86,7 +105,7 @@ export function mergeConfig(raw: unknown): AppConfig {
       const agentCfg = rawAgent as Partial<AgentConfig>;
       if (typeof agentCfg.agentId !== 'string') continue;
       const slot = base.agents.find((a) => a.agentId === agentCfg.agentId);
-      if (!slot) continue; // unknown agent — drop
+      if (!slot) continue; // unknown agent - drop
 
       if (Array.isArray(agentCfg.profiles)) {
         const cleaned = agentCfg.profiles
@@ -125,11 +144,11 @@ export function sanitizeProfile(agentId: string, raw: Partial<AgentProfile>): Ag
 export function activeProfile(config: AppConfig, agentId: string): AgentProfile {
   const agentCfg = config.agents.find((a) => a.agentId === agentId);
   if (!agentCfg) {
-    // Unknown/removed agent — return a harmless synthetic profile.
+    // Unknown/removed agent - return a harmless synthetic profile.
     return {
       name: DEFAULT_PROFILE_NAME,
       agentPath: '',
-      port: 8787,
+      port: 8989,
       mode: 'cache',
       memory: true,
       learn: true,

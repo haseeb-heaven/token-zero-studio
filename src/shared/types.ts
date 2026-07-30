@@ -77,6 +77,37 @@ export interface AgentConfig {
 export type ThemeMode = 'system' | 'dark' | 'light';
 export type ResolvedTheme = 'dark' | 'light';
 
+/** Flags controlling proxy behaviour, mirrored from ProxyDefinition. */
+export type ProxyFlags = {
+  memory?: boolean;
+  learn?: boolean;
+  lossless?: boolean;
+  noOptimize?: boolean;
+  mode?: 'token' | 'cache';
+  /** Extra raw CLI flags appended to the proxy start command. */
+  extraArgs?: string;
+  [key: string]: unknown;
+};
+
+/** A single named, saved configuration set for a proxy. */
+export interface ProxyProfile {
+  name: string;
+  /** Proxy binary path; empty string = auto-detect / PATH. */
+  proxyPath: string;
+  port: number;
+  flags: ProxyFlags;
+  /** Extra environment variables for the agent process. */
+  envOverrides: Record<string, string>;
+}
+
+export interface ProxyConfig {
+  proxyId: string;
+  /** Profiles saved by the user; always at least one ("Default"). */
+  profiles: ProxyProfile[];
+  /** Name of the profile currently selected. */
+  activeProfile: string;
+}
+
 export interface AppConfig {
   /** Explicit headroom binary path; empty = auto-detect. */
   headroomPath: string;
@@ -84,6 +115,10 @@ export interface AppConfig {
   proxyStartupTimeoutMs: number;
   /** UI theme; 'system' syncs with the OS dark/light setting. */
   theme: ThemeMode;
+  /** Active proxy id (matches a ProxyDefinition id). */
+  activeProxy: string;
+  /** Per-proxy saved profiles. */
+  proxies: ProxyConfig[];
   agents: AgentConfig[];
 }
 
@@ -143,6 +178,8 @@ export const IPC = {
   ScanAll: 'scan:all',
   ScanAgent: 'scan:agent',
   HeadroomDetect: 'headroom:detect',
+  ProxyList: 'proxies:list',
+  ProxyDetect: 'proxy:detect',
   ConfigGet: 'config:get',
   ConfigSave: 'config:save',
   LaunchStart: 'launch:start',
@@ -154,6 +191,7 @@ export const IPC = {
   PickDirectory: 'dialog:pick-directory',
   OpenPath: 'shell:open-path',
   PortCheck: 'port:check',
+  PortKill: 'port:kill',
   // main -> renderer events
   EventLog: 'event:log',
   EventRuntime: 'event:runtime',
