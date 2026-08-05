@@ -3,6 +3,19 @@ import * as path from 'node:path';
 import { resolveTheme } from '../core/theme';
 import { currentConfig, registerIpc, Shutdown } from './ipc';
 
+// Catch EPIPE and other unhandled errors to prevent Electron crashes.
+process.on('unhandledRejection', (reason) => {
+  const msg = String(reason);
+  if (msg.includes('EPIPE') || msg.includes('write EPIPE')) return;
+  console.error('Unhandled rejection:', reason);
+});
+
+process.on('uncaughtException', (err) => {
+  const msg = String(err);
+  if (msg.includes('EPIPE') || msg.includes('write EPIPE')) return;
+  console.error('Uncaught exception:', err);
+});
+
 let mainWindow: BrowserWindow | null = null;
 
 function createWindow(): void {
