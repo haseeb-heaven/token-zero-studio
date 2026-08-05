@@ -620,7 +620,8 @@ export class ProcessManager {
         },
         cwd: plan.cwd,
       });
-      this.pipeLogs(proc, launchId, agentName);
+      // Raw PTY bytes go to the embedded terminal ONLY — never the structured
+      // LOGS panel (ANSI/escape sequences would flood and auto-scroll it).
       this.pipeTerminalRaw(proc, launchId);
       return proc;
     }
@@ -629,7 +630,6 @@ export class ProcessManager {
       env: { ...composeChildEnv(plan.env, this.deps.env, this.deps.platform, this.homeDir()), TERM: 'xterm-256color', FORCE_COLOR: '1' },
       cwd: plan.cwd,
     });
-    this.pipeLogs(proc, launchId, agentName);
     this.pipeTerminalRaw(proc, launchId);
     return proc;
   }

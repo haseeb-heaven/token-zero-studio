@@ -64,7 +64,7 @@ export const PROXIES: ProxyDefinition[] = [
       return args;
     },
     envStyle: 'anthropic',
-    installInstructions: 'npx pxpipe-proxy (or npm install -g pxpipe)',
+    installInstructions: 'npx pxpipe-proxy (or npm install -g pxpipe-proxy)',
     accent: '#a78bfa',
     homepage: 'https://pxpipe.dev',
   },
@@ -272,7 +272,7 @@ export const PROXIES: ProxyDefinition[] = [
       return args;
     },
     envStyle: 'both',
-    installInstructions: 'npm install -g omni-route (or follow vendor docs)',
+    installInstructions: 'No verified npm/pip/brew package — see the project docs (https://github.com)',
     accent: '#fb923c',
     homepage: 'https://github.com',
   },
