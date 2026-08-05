@@ -50,6 +50,8 @@ export interface AgentProfile {
   /** Explicit agent binary path; empty string = auto-detect / PATH. */
   agentPath: string;
   port: number;
+  /** When true (default) a free port is auto-assigned at launch, ignoring `port`. Set false to force the fixed `port` value to take effect. */
+  autoPort: boolean;
   mode: 'token' | 'cache';
   memory: boolean;
   learn: boolean;
@@ -115,11 +117,93 @@ export interface AppConfig {
   proxyStartupTimeoutMs: number;
   /** UI theme; 'system' syncs with the OS dark/light setting. */
   theme: ThemeMode;
-  /** Active proxy id (matches a ProxyDefinition id). */
-  activeProxy: string;
+  /** Default compressor id used when launching without an explicit choice. */
+  defaultCompressor: string;
+  /** Default working directory for agent launches (empty = user home / cwd). */
+  defaultWorkingDirectory: string;
+  /** When true, fall back to an external terminal window for agent output. */
+  terminalFallback: boolean;
   /** Per-proxy saved profiles. */
   proxies: ProxyConfig[];
   agents: AgentConfig[];
+  /** User-defined custom coding agents (id prefix 'custom-agent-'). */
+  customAgents: CustomAgent[];
+  /** User-defined custom token compressors (id prefix 'custom-proxy-'). */
+  customProxies: CustomProxy[];
+}
+
+/* ---------------------------- Custom entries ---------------------------- */
+
+/** A user-defined coding agent, added manually when auto-detection misses it. */
+export interface CustomAgent {
+  /** Unique id, 'custom-agent-<slug>'. */
+  id: string;
+  name: string;
+  /** Absolute path to the executable (empty = rely on command/scan). */
+  binary: string;
+  /** Raw command line (or just the binary name) used to launch. */
+  command: string;
+  /** Extra CLI flags appended when launching the agent. */
+  args: string;
+  envStyle: EnvStyle;
+  /** Suggested/used proxy port for this agent. */
+  port: number;
+  /** Working directory to launch in. */
+  workingDirectory: string;
+  /** Additional environment variables for the agent process. */
+  envOverrides: Record<string, string>;
+}
+
+/** A user-defined token compressor, added manually. */
+export interface CustomProxy {
+  /** Unique id, 'custom-proxy-<slug>'. */
+  id: string;
+  name: string;
+  /** Absolute path to the proxy binary. */
+  binary: string;
+  /** Raw start-command template; '{port}' is substituted with the port. */
+  startCommand: string;
+  /** Base URL injected into the agent (e.g. 'http://127.0.0.1:{port}'). */
+  baseUrlTemplate: string;
+  envStyle: EnvStyle;
+  /** Port the compressor listens on. */
+  port: number;
+  /** How long to wait for the proxy to become ready, ms. */
+  timeoutMs: number;
+}
+
+/* ------------------------- Compatibility model -------------------------- */
+
+/** Detection status of an installed entry on this machine. */
+export type DetectionStatus =
+  | 'installed'
+  | 'not-found'
+  | 'manually-configured'
+  | 'invalid-path'
+  | 'unsupported';
+
+/** A single compatibility relationship: one compressor supports many agents. */
+export interface CompatibilityRule {
+  compressorId: string;
+  /** '*' means every agent; otherwise an explicit allow-list of agent ids. */
+  agentIds: string[];
+}
+
+/** Launch history record — one per launched agent tab. */
+export interface LaunchRecord {
+  id: string;
+  agentId: string;
+  compressorId: string;
+  profile: string;
+  cwd: string;
+  command: string;
+  env: Record<string, string>;
+  port: number;
+  state: RunState;
+  startedAt: number;
+  stoppedAt?: number;
+  /** Most recent per-tab output lines (ring buffer). */
+  output: string[];
 }
 
 export type ScanSource = 'path' | 'well-known' | 'drive' | 'deep' | 'explicit' | 'none';
@@ -151,12 +235,18 @@ export type RunState =
   | 'error';
 
 export interface AgentRuntime {
+  /** Launch id (multi-instance key when id !== agentId). */
+  id?: string;
   agentId: string;
   state: RunState;
   port?: number;
   proxyPid?: number;
   agentPid?: number;
   error?: string;
+  /** LaunchTracker id (Workflow sessions match EventOutput on this). */
+  trackerId?: string;
+  /** Snapshot of LaunchTracker output at return time (for session hydration). */
+  output?: string[];
 }
 
 /** A fully-resolved, pure description of what will be executed. */
@@ -181,10 +271,14 @@ export const IPC = {
   ProxyList: 'proxies:list',
   ProxyDetect: 'proxy:detect',
   InstallProxy: 'proxy:install',
+  InstallProxyOptions: 'proxy:install-options',
+  InstallAgent: 'agent:install',
+  InstallAgentOptions: 'agent:install-options',
   ConfigGet: 'config:get',
   ConfigSave: 'config:save',
   LaunchStart: 'launch:start',
   LaunchStop: 'launch:stop',
+  LaunchEmbedded: 'launch:embedded',
   RuntimeAll: 'runtime:all',
   LogsList: 'logs:list',
   LogsClear: 'logs:clear',
@@ -194,7 +288,18 @@ export const IPC = {
   OpenUrl: 'shell:open-url',
   PortCheck: 'port:check',
   PortKill: 'port:kill',
+  // Full App Redesign / Issue #3 channels
+  CompatibilityGet: 'compatibility:get',
+  CompatibleAgents: 'compatibility:agents',
+  CustomAgentSave: 'custom-agent:save',
+  CustomAgentDelete: 'custom-agent:delete',
+  CustomProxySave: 'custom-proxy:save',
+  CustomProxyDelete: 'custom-proxy:delete',
+  LaunchesList: 'launches:list',
   // main -> renderer events
   EventLog: 'event:log',
   EventRuntime: 'event:runtime',
+  EventOutput: 'event:output',
+  EventTerminalData: 'event:terminal-data',
+  ProcessInput: 'process:input',
 } as const;

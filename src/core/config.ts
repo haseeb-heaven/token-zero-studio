@@ -1,7 +1,19 @@
 import { AGENTS, getAgent } from './agents';
 import { PROXIES, getProxy } from './proxies/registry';
 import { isThemeMode } from './theme';
-import type { AgentConfig, AgentProfile, AppConfig, ProxyProfile } from '../shared/types';
+import * as path from 'node:path';
+import type {
+  AgentConfig,
+  AgentDefinition,
+  AgentProfile,
+  AppConfig,
+  CustomAgent,
+  CustomProxy,
+  ProxyFlags,
+  ProxyProfile,
+} from '../shared/types';
+import type { ProxyDefinition, ProxyMode, ProxyEnvStyle } from './proxies/types';
+import { splitArgs } from './launcher';
 
 export const DEFAULT_PROFILE_NAME = 'Default';
 /** First proxy boot loads compression models and can easily exceed 30s. */
@@ -14,6 +26,7 @@ export function defaultProfile(agentId: string, name = DEFAULT_PROFILE_NAME): Ag
     name,
     agentPath: '',
     port: agent.defaultPort,
+    autoPort: true,
     mode: 'cache',
     memory: true,
     learn: true,
@@ -35,6 +48,159 @@ export function defaultProxyProfile(proxyId: string, name = DEFAULT_PROFILE_NAME
     port: proxy.defaultPort,
     flags: { ...proxy.defaultFlags },
     envOverrides: {},
+  };
+}
+
+/** Resolve the saved binary path for a compressor ('' = auto-detect). */
+export function proxyProfilePath(config: AppConfig, proxyId: string): string {
+  const slot = config.proxies.find((p) => p.proxyId === proxyId);
+  const active = slot?.profiles.find((p) => p.name === slot.activeProfile);
+  return active?.proxyPath ?? slot?.profiles[0]?.proxyPath ?? '';
+}
+
+/** Persist a compressor binary path into its saved proxy profile. */
+export function saveProxyProfilePath(config: AppConfig, proxyId: string, proxyPath: string): void {
+  let slot = config.proxies.find((p) => p.proxyId === proxyId);
+  if (!slot) {
+    slot = {
+      proxyId,
+      profiles: [{ name: DEFAULT_PROFILE_NAME, proxyPath: '', port: 8199, flags: {}, envOverrides: {} }],
+      activeProfile: DEFAULT_PROFILE_NAME,
+    };
+    config.proxies.push(slot);
+  }
+  const active = slot.profiles.find((p) => p.name === slot.activeProfile) ?? slot.profiles[0];
+  active.proxyPath = proxyPath;
+}
+
+/** Id prefixes reserved for custom (user-defined) entries. */
+export const CUSTOM_AGENT_PREFIX = 'custom-agent-';
+export const CUSTOM_PROXY_PREFIX = 'custom-proxy-';
+
+/** Slugify a name into a safe, unique id fragment. */
+export function slugify(name: string): string {
+  return (
+    name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 48) || 'custom'
+  );
+}
+
+/** Build a fresh custom agent from a bare name (id unique via slug). */
+export function defaultCustomAgent(name: string, existing: CustomAgent[] = []): CustomAgent {
+  const base = slugify(name);
+  let id = `${CUSTOM_AGENT_PREFIX}${base}`;
+  let n = 2;
+  while (existing.some((c) => c.id === id)) id = `${CUSTOM_AGENT_PREFIX}${base}-${n++}`;
+  return {
+    id,
+    name: name.trim(),
+    binary: '',
+    command: '',
+    args: '',
+    envStyle: 'both',
+    port: 8820,
+    workingDirectory: '',
+    envOverrides: {},
+  };
+}
+
+/** Build a fresh custom proxy from a bare name (id unique via slug). */
+export function defaultCustomProxy(name: string, existing: CustomProxy[] = []): CustomProxy {
+  const base = slugify(name);
+  let id = `${CUSTOM_PROXY_PREFIX}${base}`;
+  let n = 2;
+  while (existing.some((c) => c.id === id)) id = `${CUSTOM_PROXY_PREFIX}${base}-${n++}`;
+  return {
+    id,
+    name: name.trim(),
+    binary: '',
+    startCommand: '--port {port}',
+    baseUrlTemplate: 'http://127.0.0.1:{port}',
+    envStyle: 'both',
+    port: 8199,
+    timeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
+  };
+}
+
+/** Validation errors for a custom agent (empty array = valid). */
+export function validateCustomAgent(agent: CustomAgent): string[] {
+  const errors: string[] = [];
+  if (!agent.name || agent.name.trim().length === 0) errors.push('Name is required');
+  if (!agent.command.trim() && !agent.binary.trim()) errors.push('Command or binary path is required');
+  if (!Number.isInteger(agent.port) || agent.port < 1 || agent.port > 65535) {
+    errors.push(`Port must be 1-65535 (got ${agent.port})`);
+  }
+  for (const key of Object.keys(agent.envOverrides ?? {})) {
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(key)) errors.push(`Invalid env var name: "${key}"`);
+  }
+  return errors;
+}
+
+/** Validation errors for a custom proxy (empty array = valid). */
+export function validateCustomProxy(proxy: CustomProxy): string[] {
+  const errors: string[] = [];
+  if (!proxy.name || proxy.name.trim().length === 0) errors.push('Name is required');
+  if (!proxy.binary.trim()) errors.push('Binary path is required');
+  if (!Number.isInteger(proxy.port) || proxy.port < 1 || proxy.port > 65535) {
+    errors.push(`Port must be 1-65535 (got ${proxy.port})`);
+  }
+  return errors;
+}
+
+/**
+ * Convert a custom agent into a first-class AgentDefinition so the existing
+ * scanner, launcher and compatibility layers treat it uniformly.
+ */
+export function customAgentToDefinition(custom: CustomAgent): AgentDefinition {
+  const executable = (custom.binary || custom.command).trim().split(/\s+/)[0] || custom.name;
+  return {
+    id: custom.id,
+    name: custom.name,
+    vendor: 'Custom',
+    description: 'User-defined coding agent.',
+    interfaceType: 'cli',
+    launchStrategy: 'env',
+    executables: [path.basename(executable).replace(/\.[^.]+$/, ''), executable],
+    wellKnownPaths: {},
+    envStyle: custom.envStyle,
+    defaultArgs: splitArgs(custom.args),
+    configFileHint: '',
+    defaultPort: custom.port,
+    accent: '#94a3b8',
+    homepage: '',
+  };
+}
+
+/**
+ * Convert a custom proxy into a first-class ProxyDefinition. The start command
+ * template is rendered with the chosen port. `executables[0]` is the binary
+ * basename so PATH scanning can locate it, and the full configured binary path
+ * is preferred when present.
+ */
+export function customProxyToDefinition(custom: CustomProxy, binaryPath?: string): ProxyDefinition {
+  const binary = (binaryPath || custom.binary).trim();
+  const plain = binary.replace(/^"(.*)"$/, '$1');
+  const exeName = path.basename(plain).replace(/\.[^.]+$/, '') || custom.name;
+  const render = (tpl: string, port: number): string[] => splitArgs(tpl.replace(/\{port\}/g, String(port)));
+  return {
+    id: custom.id,
+    name: custom.name,
+    description: 'User-defined token compressor.',
+    mode: 'server' as ProxyMode,
+    executables: [exeName, custom.binary],
+    wellKnownPaths: {},
+    detectCommand: `${exeName} --version`,
+    defaultPort: custom.port,
+    defaultFlags: {} as ProxyFlags,
+    buildStartArgs: (port) => render(custom.startCommand, port),
+    envStyle: custom.envStyle as ProxyEnvStyle,
+    installInstructions: 'User-managed. Configure the binary path in Token Compressors.',
+    accent: '#94a3b8',
+    homepage: '',
   };
 }
 
@@ -64,7 +230,9 @@ export function defaultConfig(): AppConfig {
     headroomPath: '',
     proxyStartupTimeoutMs: DEFAULT_PROXY_TIMEOUT_MS,
     theme: 'light',
-    activeProxy: 'headroom',
+    defaultCompressor: 'headroom',
+    defaultWorkingDirectory: '',
+    terminalFallback: false,
     proxies: PROXIES.map((proxy) => ({
       proxyId: proxy.id,
       profiles: [defaultProxyProfile(proxy.id)],
@@ -75,6 +243,8 @@ export function defaultConfig(): AppConfig {
       profiles: [defaultProfile(agent.id)],
       activeProfile: DEFAULT_PROFILE_NAME,
     })),
+    customAgents: [],
+    customProxies: [],
   };
 }
 
@@ -90,6 +260,9 @@ export function mergeConfig(raw: unknown): AppConfig {
 
   if (typeof input.headroomPath === 'string') base.headroomPath = input.headroomPath;
   if (isThemeMode(input.theme)) base.theme = input.theme;
+  if (typeof input.defaultCompressor === 'string') base.defaultCompressor = input.defaultCompressor;
+  if (typeof input.defaultWorkingDirectory === 'string') base.defaultWorkingDirectory = input.defaultWorkingDirectory;
+  if (typeof input.terminalFallback === 'boolean') base.terminalFallback = input.terminalFallback;
   if (
     typeof input.proxyStartupTimeoutMs === 'number' &&
     Number.isInteger(input.proxyStartupTimeoutMs) &&
@@ -124,6 +297,38 @@ export function mergeConfig(raw: unknown): AppConfig {
       }
     }
   }
+
+  // Carry over saved per-compressor binary paths (proxy profiles).
+  if (Array.isArray(input.proxies)) {
+    for (const rawSlot of input.proxies) {
+      if (typeof rawSlot !== 'object' || rawSlot === null) continue;
+      const slot = rawSlot as { proxyId?: unknown; profiles?: unknown };
+      if (typeof slot.proxyId !== 'string') continue;
+      const target = base.proxies.find((p) => p.proxyId === slot.proxyId);
+      if (!target) continue;
+      if (Array.isArray(slot.profiles) && slot.profiles.length > 0) {
+        const first = slot.profiles[0] as { proxyPath?: unknown };
+        if (first && typeof first === 'object' && typeof first.proxyPath === 'string') {
+          target.profiles[0].proxyPath = first.proxyPath;
+          target.activeProfile = target.profiles[0].name;
+        }
+      }
+    }
+  }
+
+  // Carry over user-defined custom agents / compressors (validated).
+  if (Array.isArray(input.customAgents)) {
+    base.customAgents = input.customAgents.filter(
+      (c): c is CustomAgent =>
+        typeof c === 'object' && c !== null && typeof c.name === 'string' && typeof c.id === 'string' && validateCustomAgent(c).length === 0,
+    );
+  }
+  if (Array.isArray(input.customProxies)) {
+    base.customProxies = input.customProxies.filter(
+      (c): c is CustomProxy =>
+        typeof c === 'object' && c !== null && typeof c.name === 'string' && typeof c.id === 'string' && validateCustomProxy(c).length === 0,
+    );
+  }
   return base;
 }
 
@@ -149,6 +354,7 @@ export function activeProfile(config: AppConfig, agentId: string): AgentProfile 
       name: DEFAULT_PROFILE_NAME,
       agentPath: '',
       port: 8989,
+      autoPort: true,
       mode: 'cache',
       memory: true,
       learn: true,

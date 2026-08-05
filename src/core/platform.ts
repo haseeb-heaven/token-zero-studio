@@ -144,6 +144,63 @@ export function commonSearchDirs(platform: PlatformName): string[] {
 }
 
 /**
+ * User-level bin directories where package managers drop CLIs after install
+ * (pip --user, uv tool, npm -g, cargo, brew). Always searched during scan so
+ * Electron's often-stripped PATH still finds freshly installed binaries.
+ */
+export function userBinDirs(platform: PlatformName, homeDir: string): string[] {
+  if (platform === 'win32') {
+    return [
+      `${homeDir}\\.local\\bin`,
+      `${homeDir}\\AppData\\Roaming\\Python\\Python312\\Scripts`,
+      `${homeDir}\\AppData\\Roaming\\Python\\Python311\\Scripts`,
+      `${homeDir}\\AppData\\Roaming\\Python\\Scripts`,
+      `${homeDir}\\AppData\\Roaming\\npm`,
+      `${homeDir}\\AppData\\Local\\Programs\\Python\\Python312\\Scripts`,
+      `${homeDir}\\AppData\\Local\\Programs\\Python\\Python311\\Scripts`,
+      `${homeDir}\\AppData\\Local\\npx`,
+      `${homeDir}\\.cargo\\bin`,
+    ];
+  }
+  const dirs = [
+    `${homeDir}/.local/bin`,
+    `${homeDir}/.cargo/bin`,
+    `${homeDir}/.npm-global/bin`,
+    `${homeDir}/Library/Python/3.13/bin`,
+    `${homeDir}/Library/Python/3.12/bin`,
+    `${homeDir}/Library/Python/3.11/bin`,
+    '/usr/local/bin',
+    '/opt/homebrew/bin',
+  ];
+  if (platform === 'linux') {
+    dirs.push('/home/linuxbrew/.linuxbrew/bin', '/snap/bin');
+  }
+  return dirs;
+}
+
+/**
+ * Prepend user bin dirs that are missing from PATH so child processes and
+ * scanners see freshly installed tools without requiring a shell restart.
+ */
+export function mergePathWithUserBins(
+  pathValue: string,
+  platform: PlatformName,
+  homeDir: string,
+): string {
+  const sep = pathSeparator(platform);
+  const existing = splitPathEnv(pathValue, platform);
+  const existingKeys = new Set(
+    existing.map((e) => (platform === 'win32' ? e.toLowerCase() : e)),
+  );
+  const extras: string[] = [];
+  for (const dir of userBinDirs(platform, homeDir)) {
+    const key = platform === 'win32' ? dir.toLowerCase() : dir;
+    if (!existingKeys.has(key)) extras.push(dir);
+  }
+  return [...extras, ...existing].join(sep);
+}
+
+/**
  * Enumerate available drives on Windows (C:\, D:\, ...).
  * On macOS/Linux returns a single-root list.
  */
