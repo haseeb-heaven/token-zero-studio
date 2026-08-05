@@ -277,7 +277,7 @@ describe('ProcessManager', () => {
     const states: string[] = [];
     pm.onRuntimeChange((r) => states.push(r.state));
 
-    const runtime = await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    const runtime = await pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     expect(runtime.state).toBe('running');
     expect(spawned[0].cmd).toBe('/hb/headroom');
     expect(spawned[0].args[0]).toBe('proxy');
@@ -289,7 +289,7 @@ describe('ProcessManager', () => {
     const { spawn, spawned } = fakeSpawn();
     const proxyManager = makeProxyManager(spawn);
     const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', proxyManager });
-    const runtime = await pm.start(makePlan('continue'), headroom, '/hb/headroom', headroom.defaultFlags, 'Continue', 5000);
+    const runtime = await pm.start('continue', makePlan('continue'), headroom, '/hb/headroom', headroom.defaultFlags, 'Continue', 5000);
     expect(runtime.state).toBe('proxy-up');
     expect(spawned.length).toBe(1);
   });
@@ -298,7 +298,7 @@ describe('ProcessManager', () => {
     const { spawn } = fakeSpawn();
     const proxyManager = makeProxyManager(spawn, failFetch);
     const pm = new ProcessManager({ spawn, fetch: failFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', proxyManager });
-    await expect(pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 300)).rejects.toThrow(/did not become ready/);
+    await expect(pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 300)).rejects.toThrow(/did not become ready/);
     expect(pm.runtimeFor('codex').state).toBe('error');
   });
 
@@ -306,15 +306,15 @@ describe('ProcessManager', () => {
     const { spawn } = fakeSpawn();
     const proxyManager = makeProxyManager();
     const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
-    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
-    await expect(pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000)).rejects.toThrow(/already/);
+    await pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await expect(pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000)).rejects.toThrow(/already/);
   });
 
   it('stop kills agent and proxy and reports stopped', async () => {
     const { spawn } = fakeSpawn();
     const proxyManager = makeProxyManager();
     const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
-    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     const stopped = pm.stop('codex');
     expect(stopped.state).toBe('stopped');
     expect(pm.runtimeFor('codex').state).toBe('stopped');
@@ -331,8 +331,8 @@ describe('ProcessManager', () => {
     const { spawn } = fakeSpawn();
     const proxyManager = makeProxyManager();
     const pm = new ProcessManager({ spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
-    await pm.start(makePlan('codex'), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
-    await pm.start(makePlan('claude'), headroom, '/hb/headroom', headroom.defaultFlags, 'Claude', 5000);
+    await pm.start('codex', makePlan('codex'), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await pm.start('claude', makePlan('claude'), headroom, '/hb/headroom', headroom.defaultFlags, 'Claude', 5000);
     pm.stopAll();
     expect(pm.runtimeFor('codex').state).toBe('stopped');
     expect(pm.runtimeFor('claude').state).toBe('stopped');
@@ -354,7 +354,7 @@ describe('ProcessManager', () => {
     };
     const proxyManager = new ProxyManager({ spawn: wrappedSpawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux' });
     const pm = new ProcessManager({ spawn: wrappedSpawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'linux', terminal: 'xterm', proxyManager });
-    await pm.start(makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
+    await pm.start('codex', makePlan(), headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 5000);
     exitCb?.(1);
     expect(pm.runtimeFor('codex').state).toBe('stopped');
   });

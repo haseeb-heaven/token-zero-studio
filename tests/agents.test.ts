@@ -5,12 +5,16 @@ describe('agent registry', () => {
   it('covers every tool supported by headroom wrap (v0.32.x)', () => {
     const expected = [
       'aider',
+      'antigravity',
       'claude',
       'cline',
       'codex',
+      'commandcode',
       'continue',
       'copilot',
       'cursor',
+      'devin',
+      'gemini',
       'goose',
       'grok',
       'grok-build',
@@ -20,11 +24,16 @@ describe('agent registry', () => {
       'openclaw',
       'opencode',
       'openhands',
+      'pi-coding',
+      'replit',
+      'roo',
+      't3',
       'vibe',
+      'windsurf',
       'zcode',
     ];
     expect(AGENTS.map((a) => a.id).sort()).toEqual(expected.sort());
-    expect(AGENTS.length).toBe(18);
+    expect(AGENTS.length).toBe(27);
   });
 
   it('has unique ids and unique default ports', () => {

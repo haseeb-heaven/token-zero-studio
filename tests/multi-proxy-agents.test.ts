@@ -53,8 +53,8 @@ const readyFetch: FetchFn = async () => ({ status: 200 });
 const noSleep = () => Promise.resolve();
 
 describe('Multi-Proxy Matrix Testing', () => {
-  it('has 17 active agents (cursor skipped per request)', () => {
-    expect(ACTIVE_AGENTS.length).toBe(17);
+  it('has 26 active agents (cursor skipped per request)', () => {
+    expect(ACTIVE_AGENTS.length).toBe(26);
     expect(ACTIVE_AGENTS.some((a) => a.id === 'cursor')).toBe(false);
   });
 
@@ -134,10 +134,12 @@ describe('Multi-Proxy Matrix Testing', () => {
           proxyManager,
         });
 
+        const launchId = `${proxyDef.id}-${agentId}`;
         const agentBin = agent.launchStrategy === 'env' ? `/fake/bin/${agentId}` : null;
         const plan = buildLaunchPlan(agent, profile, proxyDef, `/fake/proxy/${proxyDef.id}`, agentBin);
 
         const runtime = await pm.start(
+          launchId,
           plan,
           proxyDef,
           `/fake/proxy/${proxyDef.id}`,
@@ -165,9 +167,9 @@ describe('Multi-Proxy Matrix Testing', () => {
           }
         }
 
-        const stopped = pm.stop(agentId);
+        const stopped = pm.stop(launchId);
         expect(stopped.state).toBe('stopped');
-        expect(pm.runtimeFor(agentId).state).toBe('stopped');
+        expect(pm.runtimeFor(launchId).state).toBe('stopped');
       });
     });
   });

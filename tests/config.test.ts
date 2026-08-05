@@ -9,6 +9,10 @@ import {
   mergeConfig,
   sanitizeProfile,
   validateProfile,
+  proxyProfilePath,
+  saveProxyProfilePath,
+  defaultProxyProfile,
+  DEFAULT_PROFILE_NAME,
 } from '../src/core/config';
 
 function memFs(initial?: string): ConfigFs & { files: Map<string, string> } {
@@ -43,6 +47,9 @@ describe('defaultConfig', () => {
     }
     expect(cfg.headroomPath).toBe('');
     expect(cfg.proxyStartupTimeoutMs).toBeGreaterThan(0);
+    expect(cfg.defaultCompressor).toBe('headroom');
+    expect(cfg.defaultWorkingDirectory).toBe('');
+    expect(cfg.terminalFallback).toBe(false);
   });
 });
 
@@ -108,6 +115,17 @@ describe('mergeConfig', () => {
     const merged = mergeConfig({ proxyStartupTimeoutMs: 5 });
     expect(merged.proxyStartupTimeoutMs).toBe(60000);
   });
+
+  it('preserves new settings fields: defaultCompressor, defaultWorkingDirectory, terminalFallback', () => {
+    const merged = mergeConfig({
+      defaultCompressor: 'rtk',
+      defaultWorkingDirectory: '/home/user/projects',
+      terminalFallback: true,
+    });
+    expect(merged.defaultCompressor).toBe('rtk');
+    expect(merged.defaultWorkingDirectory).toBe('/home/user/projects');
+    expect(merged.terminalFallback).toBe(true);
+  });
 });
 
 describe('sanitizeProfile', () => {
@@ -161,3 +179,39 @@ describe('ConfigStore', () => {
     expect(loaded.agents.length).toBe(AGENTS.length);
   });
 });
+
+describe('proxyProfilePath / saveProxyProfilePath', () => {
+  it('returns empty path when no saved profile exists', () => {
+    expect(proxyProfilePath(defaultConfig(), 'headroom')).toBe('');
+  });
+
+  it('stores and reads back a compressor binary path', () => {
+    const cfg = defaultConfig();
+    saveProxyProfilePath(cfg, 'rtk', '/usr/local/bin/rtk');
+    expect(proxyProfilePath(cfg, 'rtk')).toBe('/usr/local/bin/rtk');
+  });
+
+  it('round-trips through the config store and survives a load', () => {
+    const fs = memFs();
+    const store = new ConfigStore('config.json', fs);
+    const cfg = store.load();
+    saveProxyProfilePath(cfg, 'pxpipe', '/opt/pxpipe/pxpipe');
+    store.save(cfg);
+    expect(proxyProfilePath(store.load(), 'pxpipe')).toBe('/opt/pxpipe/pxpipe');
+  });
+
+  it('creates a proxy slot when none exists for a compressor', () => {
+    const cfg = defaultConfig();
+    const before = cfg.proxies.length;
+    saveProxyProfilePath(cfg, 'some-future-compressor', '/x/bin');
+    expect(cfg.proxies.length).toBe(before + 1);
+    expect(proxyProfilePath(cfg, 'some-future-compressor')).toBe('/x/bin');
+  });
+
+  it('defaultProxyProfile produces an empty proxyPath profile with a default port', () => {
+    const p = defaultProxyProfile('headroom', DEFAULT_PROFILE_NAME);
+    expect(p.proxyPath).toBe('');
+    expect(p.port).toBeGreaterThan(0);
+  });
+});
+

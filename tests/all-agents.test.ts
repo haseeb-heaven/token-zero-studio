@@ -46,6 +46,16 @@ const FACTS: Record<string, AgentFacts> = {
   vibe:        { port: 8805, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'vibe',       configHintIncludes: '.vibe' },
   zcode:       { port: 8806, envStyle: 'both',      interfaceType: 'gui',           strategy: 'env',          executable: 'zcode',      configHintIncludes: 'ZCode' },
   aider:       { port: 8793, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'aider',      configHintIncludes: '.aider' },
+  // Expanded agents (Issue #3)
+  gemini:      { port: 8810, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'gemini',     configHintIncludes: '.gemini' },
+  windsurf:    { port: 8811, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'windsurf',   configHintIncludes: '.codeium' },
+  devin:       { port: 8812, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'devin',      configHintIncludes: '.devin' },
+  roo:         { port: 8813, envStyle: 'both',      interfaceType: 'ide-extension', strategy: 'env',          executable: 'roo',        configHintIncludes: 'Roo' },
+  replit:      { port: 8814, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'replit',     configHintIncludes: '.replit' },
+  'pi-coding': { port: 8815, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'pi',         configHintIncludes: '.piapp' },
+  antigravity: { port: 8816, envStyle: 'openai',    interfaceType: 'cli',           strategy: 'env',          executable: 'agy',        configHintIncludes: '.antigravity' },
+  t3:          { port: 8817, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 't3',         configHintIncludes: '.t3' },
+  commandcode: { port: 8818, envStyle: 'both',      interfaceType: 'cli',           strategy: 'env',          executable: 'commandcode',configHintIncludes: '.commandcode' },
 };
 
 function emptyCtx(platform: PlatformName): PlatformContext {

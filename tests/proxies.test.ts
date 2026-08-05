@@ -3,7 +3,7 @@ import { getProxy, hasProxy, proxyIds, PROXIES } from '../src/core/proxies/regis
 import { buildProxyEnv } from '../src/core/proxies/types';
 
 describe('proxy registry', () => {
-  it('registers headroom, pxpipe, rtk, llmlingua, tokenshift, caveman, and leanctx', () => {
+  it('registers headroom, pxpipe, rtk, llmlingua, tokenshift, caveman, leanctx, supercompress, selective-ctx, squeez, omni-route, graphify, and ponytail', () => {
     const ids = proxyIds();
     expect(ids).toContain('headroom');
     expect(ids).toContain('pxpipe');
@@ -12,7 +12,13 @@ describe('proxy registry', () => {
     expect(ids).toContain('tokenshift');
     expect(ids).toContain('caveman');
     expect(ids).toContain('leanctx');
-    expect(ids).toHaveLength(7);
+    expect(ids).toContain('supercompress');
+    expect(ids).toContain('selective-ctx');
+    expect(ids).toContain('squeez');
+    expect(ids).toContain('omni-route');
+    expect(ids).toContain('graphify');
+    expect(ids).toContain('ponytail');
+    expect(ids).toHaveLength(13);
   });
 
   it('hasProxy returns true only for known ids', () => {
