@@ -44,9 +44,20 @@ const CATALOG: Record<string, PlatformMap> = {
     ],
   },
   pxpipe: {
-    default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g pxpipe' },
+    darwin: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
+      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
       { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
+    ],
+    linux: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
+      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
+      { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
+      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
+      { id: 'npx', label: 'npx (no install)', command: 'cmd /c npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
     ],
   },
   rtk: {
@@ -67,78 +78,176 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   llmlingua: {
     darwin: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 llmlingua || uv tool install llmlingua', note: 'Installs into ~/.local/bin' },
       { id: 'pip', label: 'pip', command: 'pip3 install llmlingua || python3 -m pip install llmlingua' },
       { id: 'pipx', label: 'pipx', command: 'pipx install llmlingua' },
     ],
     linux: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 llmlingua || uv tool install llmlingua', note: 'Installs into ~/.local/bin' },
       { id: 'pip', label: 'pip', command: 'pip3 install llmlingua || python3 -m pip install llmlingua' },
       { id: 'pipx', label: 'pipx', command: 'pipx install llmlingua' },
     ],
     win32: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install llmlingua', note: 'Installs into %USERPROFILE%\\.local\\bin' },
       { id: 'pip', label: 'pip', command: 'py -m pip install llmlingua || python -m pip install llmlingua' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install llmlingua' },
     ],
   },
   tokenshift: {
     darwin: [
-      { id: 'curl', label: 'Install script', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh' },
+      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh', note: 'Installs to ~/.local/bin' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install pointfive/tap/tokenshift || brew install tokenshift' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
     ],
     linux: [
-      { id: 'curl', label: 'Install script', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh' },
+      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh', note: 'Installs to ~/.local/bin' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install pointfive/tap/tokenshift || brew install tokenshift' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
     ],
     win32: [
-      { id: 'ps1', label: 'PowerShell installer', command: 'powershell -NoProfile -Command "curl -fsSL https://www.pointfive.co/tokenshift/install.ps1 | iex"' },
+      { id: 'ps1', label: 'PowerShell installer (recommended)', command: 'powershell -NoProfile -Command "curl -fsSL https://www.pointfive.co/tokenshift/install.ps1 | iex"' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
     ],
   },
   caveman: {
     darwin: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g caveman || npm install -g @caveman/cli' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g caveman || npm install -g @caveman/cli' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install caveman || brew tap JuliusBrussee/caveman && brew install caveman' },
       { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Ephemeral run; prefer npm -g for detection' },
     ],
     linux: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g caveman || npm install -g @caveman/cli' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g caveman || npm install -g @caveman/cli' },
       { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Ephemeral run; prefer npm -g for detection' },
     ],
     win32: [
-      { id: 'ps1', label: 'PowerShell installer', command: 'powershell -NoProfile -Command "irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | iex"' },
+      { id: 'ps1', label: 'PowerShell installer (recommended)', command: 'powershell -NoProfile -Command "irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | iex"' },
       { id: 'npm', label: 'npm global', command: 'npm install -g caveman' },
     ],
   },
   leanctx: {
-    default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g lean-ctx' },
+    darwin: [
+      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://leanctx.com/install.sh | sh', note: 'Installs to ~/.local/bin' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
       { id: 'pip', label: 'pip', command: 'pip3 install leanctx || python3 -m pip install leanctx || py -m pip install leanctx' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install leanctx/tap/leanctx || brew install lean-ctx' },
+    ],
+    linux: [
+      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://leanctx.com/install.sh | sh', note: 'Installs to ~/.local/bin' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
+      { id: 'pip', label: 'pip', command: 'pip3 install leanctx || python3 -m pip install leanctx || py -m pip install leanctx' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install leanctx/tap/leanctx || brew install lean-ctx' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
+      { id: 'pip', label: 'pip', command: 'py -m pip install leanctx || python -m pip install leanctx' },
     ],
   },
   supercompress: {
-    default: [
-      { id: 'pip', label: 'pip', command: 'pip3 install supercompress || python3 -m pip install supercompress || py -m pip install supercompress' },
+    darwin: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 supercompress || uv tool install supercompress', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install supercompress || python3 -m pip install supercompress' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install supercompress' },
       { id: 'npm', label: 'npm global', command: 'npm install -g supercompress' },
+    ],
+    linux: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install supercompress', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install supercompress || python3 -m pip install supercompress' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install supercompress' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g supercompress' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g supercompress' },
+      { id: 'uv', label: 'uv tool', command: 'uv tool install supercompress', note: 'Installs into %USERPROFILE%\\.local\\bin' },
+      { id: 'pip', label: 'pip', command: 'py -m pip install supercompress || python -m pip install supercompress' },
     ],
   },
   'selective-ctx': {
-    default: [
-      { id: 'pip', label: 'pip', command: 'pip3 install selective-context || python3 -m pip install selective-context || py -m pip install selective-context' },
+    darwin: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 selective-context || uv tool install selective-context', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install selective-context || python3 -m pip install selective-context' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install selective-context' },
+    ],
+    linux: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install selective-context', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install selective-context || python3 -m pip install selective-context' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install selective-context' },
+    ],
+    win32: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install selective-context', note: 'Installs into %USERPROFILE%\\.local\\bin' },
+      { id: 'pip', label: 'pip', command: 'py -m pip install selective-context || python -m pip install selective-context' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install selective-context' },
     ],
   },
   squeez: {
-    default: [
-      { id: 'pip', label: 'pip', command: 'pip3 install squeez || python3 -m pip install squeez || py -m pip install squeez' },
+    darwin: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 squeez || uv tool install squeez', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install squeez || python3 -m pip install squeez' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install squeez' },
       { id: 'npm', label: 'npm global', command: 'npm install -g squeez' },
+    ],
+    linux: [
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install squeez', note: 'Installs into ~/.local/bin' },
+      { id: 'pip', label: 'pip', command: 'pip3 install squeez || python3 -m pip install squeez' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install squeez' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g squeez' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g squeez' },
+      { id: 'uv', label: 'uv tool', command: 'uv tool install squeez', note: 'Installs into %USERPROFILE%\\.local\\bin' },
+      { id: 'pip', label: 'pip', command: 'py -m pip install squeez || python -m pip install squeez' },
     ],
   },
   'omni-route': {
-    default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g omni-route' },
+    darwin: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install omni-route/tap/omni-route || brew install omni-route' },
+      { id: 'pip', label: 'pip', command: 'pip3 install omni-route || python3 -m pip install omni-route' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
+    ],
+    linux: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
+      { id: 'pip', label: 'pip', command: 'pip3 install omni-route || python3 -m pip install omni-route' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
     ],
   },
   graphify: {
-    default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g graphify' },
+    darwin: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g graphify' },
+      { id: 'uv', label: 'uv tool', command: 'uv tool install graphify' },
+      { id: 'pip', label: 'pip', command: 'pip3 install graphify || python3 -m pip install graphify' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install graphify' },
+    ],
+    linux: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g graphify' },
+      { id: 'uv', label: 'uv tool', command: 'uv tool install graphify' },
+      { id: 'pip', label: 'pip', command: 'pip3 install graphify || python3 -m pip install graphify' },
+      { id: 'pipx', label: 'pipx', command: 'pipx install graphify' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g graphify' },
+      { id: 'uv', label: 'uv tool', command: 'uv tool install graphify' },
+      { id: 'pip', label: 'pip', command: 'py -m pip install graphify || python -m pip install graphify' },
     ],
   },
   ponytail: {
-    default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g ponytail' },
+    darwin: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
+      { id: 'brew', label: 'Homebrew', command: 'brew install ponytail || brew install ponytail/tap/ponytail' },
+      { id: 'cargo', label: 'Cargo', command: 'cargo install ponytail || cargo install --git https://github.com/ponytail-ai/ponytail ponytail' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Prefer npm -g for PATH detection' },
+    ],
+    linux: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
+      { id: 'cargo', label: 'Cargo', command: 'cargo install ponytail || cargo install --git https://github.com/ponytail-ai/ponytail ponytail' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Prefer npm -g for PATH detection' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
+      { id: 'cargo', label: 'Cargo', command: 'cargo install ponytail || cargo install --git https://github.com/ponytail-ai/ponytail ponytail' },
     ],
   },
 };

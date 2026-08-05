@@ -63,6 +63,66 @@ describe('getProxyInstallOptions', () => {
     }
   });
 
+  it('offers multiple install sources for every compressor on darwin (so the UI shows a fallback chain)', () => {
+    const ids = [
+      'headroom', 'pxpipe', 'rtk', 'llmlingua', 'tokenshift', 'caveman', 'leanctx',
+      'supercompress', 'selective-ctx', 'squeez', 'omni-route', 'graphify', 'ponytail',
+    ];
+    for (const id of ids) {
+      const opts = getProxyInstallOptions(id, 'darwin');
+      expect(opts.length, `${id} darwin`).toBeGreaterThan(1);
+      const idset = new Set(opts.map((o) => o.id));
+      // Distinct channels — no accidental duplicate install methods.
+      expect(idset.size, `${id} distinct channels`).toBe(opts.length);
+      expect(opts.every((o) => o.command.trim().length > 0), `${id} non-empty`).toBe(true);
+    }
+  });
+
+  it('prefers durable PATH installs (npm/uv/pip) over ephemeral npx as the first option', () => {
+    for (const id of ['supercompress', 'squeez', 'omni-route', 'graphify', 'ponytail']) {
+      const first = pickPreferredInstallCommand(id, 'darwin');
+      expect(first, id).toMatch(/npm install|uv tool|pip3 install|cargo install|curl|brew install/);
+      expect(first, id).not.toMatch(/^npx /);
+    }
+  });
+
+  it('every uv/pipx/npm install lands in a PATH that scanAgent can see (post-install detection)', () => {
+    const ctx = fakeCtx('darwin', {
+      '/Users/test/.local/bin/supercompress': true,
+      '/Users/test/.local/bin/graphify': true,
+      '/Users/test/.local/bin/ponytail': true,
+      '/Users/test/.local/bin/squeez': true,
+      '/Users/test/.local/bin/selective-ctx': true,
+    }, { PATH: '/usr/bin:/bin', HOME: '/Users/test' });
+    for (const [id, exe] of [
+      ['supercompress', 'supercompress'],
+      ['graphify', 'graphify'],
+      ['ponytail', 'ponytail'],
+      ['squeez', 'squeez'],
+      ['selective-ctx', 'selective-ctx'],
+    ] as const) {
+      const def = getProxy(id);
+      const agentDef = {
+        id,
+        name: def.name,
+        vendor: def.name,
+        description: '',
+        interfaceType: 'cli' as const,
+        launchStrategy: 'env' as const,
+        executables: [exe],
+        wellKnownPaths: def.wellKnownPaths,
+        envStyle: 'both' as const,
+        defaultArgs: [],
+        configFileHint: '',
+        defaultPort: 0,
+        accent: '',
+        homepage: '',
+      };
+      const scan = scanAgent(agentDef, ctx);
+      expect(scan.found, `${id} detected after install`).toBe(true);
+    }
+  });
+
   it('pickPreferredInstallCommand returns first option command', () => {
     const cmd = pickPreferredInstallCommand('headroom', 'linux');
     expect(cmd).toContain('headroom-ai');
