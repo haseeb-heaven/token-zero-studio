@@ -3,6 +3,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  formatInstallOutcome,
   getProxyInstallOptions,
   pickPreferredInstallCommand,
   resolveInstallShell,
@@ -177,6 +178,29 @@ describe('getProxyInstallOptions', () => {
     };
     expect(scanAgent(codexDef, ctx).found).toBe(true);
     expect(scanAgent(squeezDef, ctx).found).toBe(true);
+  });
+
+  it('formatInstallOutcome reports probed dirs when install exits 0 but binary is not detected', () => {
+    const out = formatInstallOutcome({
+      ok: true,
+      exitedZero: true,
+      detected: false,
+      probedDirs: ['/Users/test/.local/bin', '/opt/homebrew/bin', '/usr/bin'],
+      label: 'uv tool',
+      name: 'Squeez',
+    });
+    expect(out.message).toContain('/Users/test/.local/bin');
+    expect(out.message).toContain('/opt/homebrew/bin');
+    expect(out.message).toContain('not found');
+  });
+
+  it('formatInstallOutcome success and failure branches', () => {
+    const ok = formatInstallOutcome({ ok: true, exitedZero: true, detected: true, probedDirs: [], label: 'npm', name: 'PxPipe' });
+    expect(ok.message).toBe('Successfully installed PxPipe.');
+    const failed = formatInstallOutcome({ ok: false, exitedZero: false, detected: false, probedDirs: [], label: 'npm', name: 'PxPipe' });
+    expect(failed.message).toContain('Installation failed');
+    const err = formatInstallOutcome({ ok: false, exitedZero: false, detected: false, probedDirs: [], label: 'npm', name: 'PxPipe', error: 'ENOTFOUND registry.npmjs.org' });
+    expect(err.message).toContain('ENOTFOUND');
   });
 
   it('pickPreferredInstallCommand returns first option command', () => {

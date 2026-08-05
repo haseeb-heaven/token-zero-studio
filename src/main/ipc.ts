@@ -23,9 +23,9 @@ import { LaunchTracker, resolveTrackerId } from '../core/launch-records';
 import { PortAllocator, chooseLaunchPort } from '../core/port-allocator';
 import { ProcessManager, SpawnedProcess, buildLaunchPlan, resolveAgentBinary } from '../core/launcher';
 import { Logger } from '../core/logger';
-import { currentPlatformContext, mergePathWithUserBins } from '../core/platform';
+import { currentPlatformContext, mergePathWithUserBins, splitPathEnv } from '../core/platform';
 import { ProxyManager } from '../core/proxy-manager';
-import { getProxyInstallOptions, resolveInstallShell } from '../core/proxy-install';
+import { formatInstallOutcome, getProxyInstallOptions, resolveInstallShell } from '../core/proxy-install';
 import { getAgentInstallOptions } from '../core/agent-install';
 import { PROXIES, getProxy } from '../core/proxies/registry';
 import type { ProxyDefinition } from '../core/proxies/types';
@@ -405,31 +405,46 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const queue = optionId
       ? [chosen, ...options.filter((o) => o.id !== chosen.id)]
       : options;
-    let lastCode: number | null = 1;
     let lastError: string | undefined;
     for (const opt of queue) {
       logger.info('proxy', `Trying install option "${opt.label}" for ${proxyDef.name}`);
       const result = await runOne(opt.command);
-      lastCode = result.code;
       lastError = result.error;
       if (result.code === 0) {
         // Refresh PATH and re-scan so the UI can locate the binary immediately.
         process.env.PATH = baseEnv.PATH;
+        const probedDirs = splitPathEnv(baseEnv.PATH, ctx.platform);
         const proxyAgentDef = proxyToAgentDef(proxyDef);
         const scan = scanAgent(proxyAgentDef, { ...ctx, env: { ...ctx.env, PATH: baseEnv.PATH } });
         if (scan.found) {
           logger.info('proxy', `Successfully installed ${proxyDef.name}; found at ${scan.paths[0]}`);
+          const outcome = formatInstallOutcome({
+            ok: true,
+            exitedZero: true,
+            detected: true,
+            probedDirs,
+            label: opt.label,
+            name: proxyDef.name,
+          });
           return {
             ok: true,
-            message: `Successfully installed ${proxyDef.name} via ${opt.label}. Found at ${scan.paths[0]}`,
+            message: `${outcome.message} Found at ${scan.paths[0]}`,
             paths: scan.paths,
             options,
           };
         }
         logger.warn('proxy', `Install of ${proxyDef.name} via ${opt.label} exited 0 but binary not yet on PATH`);
+        const outcome = formatInstallOutcome({
+          ok: true,
+          exitedZero: true,
+          detected: false,
+          probedDirs,
+          label: opt.label,
+          name: proxyDef.name,
+        });
         return {
           ok: true,
-          message: `Installed ${proxyDef.name} via ${opt.label}, but binary was not detected yet. Click Detect or set the path manually.`,
+          message: `${outcome.message} (via ${opt.label})`,
           paths: [],
           options,
         };
@@ -437,11 +452,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       logger.warn('proxy', `Install option "${opt.label}" failed (exit ${result.code}${result.error ? `: ${result.error}` : ''})`);
     }
 
+    const outcome = formatInstallOutcome({
+      ok: false,
+      exitedZero: false,
+      detected: false,
+      probedDirs: splitPathEnv(baseEnv.PATH, ctx.platform),
+      label: queue.map((o) => o.label).join(', '),
+      name: proxyDef.name,
+      error: lastError,
+    });
     return {
       ok: false,
-      message: lastError
-        ? `Installation error: ${lastError}`
-        : `Installation failed with exit code ${lastCode}. Tried: ${queue.map((o) => o.label).join(', ')}. Check logs for details.`,
+      message: outcome.message,
       options,
     };
   });
@@ -491,38 +513,60 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const queue = optionId
       ? [chosen, ...options.filter((o) => o.id !== chosen.id)]
       : options;
-    let lastCode: number | null = 1;
     let lastError: string | undefined;
     for (const opt of queue) {
       logger.info('app', `Trying install option "${opt.label}" for ${agentDef.name}`);
       const result = await runOne(opt.command);
-      lastCode = result.code;
       lastError = result.error;
       if (result.code === 0) {
         process.env.PATH = baseEnv.PATH;
+        const probedDirs = splitPathEnv(baseEnv.PATH, ctx.platform);
         const scan = scanAgent(agentDef, { ...ctx, env: { ...ctx.env, PATH: baseEnv.PATH } });
         if (scan.found) {
+          const outcome = formatInstallOutcome({
+            ok: true,
+            exitedZero: true,
+            detected: true,
+            probedDirs,
+            label: opt.label,
+            name: agentDef.name,
+          });
           return {
             ok: true,
-            message: `Successfully installed ${agentDef.name} via ${opt.label}. Found at ${scan.paths[0]}`,
+            message: `${outcome.message} Found at ${scan.paths[0]}`,
             paths: scan.paths,
             options,
           };
         }
+        const outcome = formatInstallOutcome({
+          ok: true,
+          exitedZero: true,
+          detected: false,
+          probedDirs,
+          label: opt.label,
+          name: agentDef.name,
+        });
         return {
           ok: true,
-          message: `Installed ${agentDef.name} via ${opt.label}, but binary was not detected yet. Click Scan.`,
+          message: `${outcome.message} (via ${opt.label})`,
           paths: [],
           options,
         };
       }
       logger.warn('app', `Install option "${opt.label}" failed (exit ${result.code})`);
     }
+    const outcome = formatInstallOutcome({
+      ok: false,
+      exitedZero: false,
+      detected: false,
+      probedDirs: splitPathEnv(baseEnv.PATH, ctx.platform),
+      label: queue.map((o) => o.label).join(', '),
+      name: agentDef.name,
+      error: lastError,
+    });
     return {
       ok: false,
-      message: lastError
-        ? `Installation error: ${lastError}`
-        : `Installation failed (exit ${lastCode}). Tried: ${queue.map((o) => o.label).join(', ')}.`,
+      message: outcome.message,
       options,
     };
   });

@@ -252,3 +252,28 @@ export function resolveInstallShell(platform: PlatformName): { shell: string; fl
   if (platform === 'win32') return { shell: 'cmd.exe', flag: '/c' };
   return { shell: '/bin/sh', flag: '-c' };
 }
+
+export interface InstallOutcomeInput {
+  ok: boolean;
+  exitedZero: boolean;
+  detected: boolean;
+  probedDirs: string[];
+  label: string;
+  name: string;
+  error?: string;
+}
+
+/**
+ * Human-readable install result. When the command exited 0 but the binary was
+ * not detected, lists the dirs that were probed so the user knows where to look.
+ */
+export function formatInstallOutcome(opts: InstallOutcomeInput): { message: string; paths: string[] } {
+  if (opts.error) return { message: `Installation error: ${opts.error}`, paths: [] };
+  if (!opts.exitedZero) return { message: `Installation failed (non-zero exit). Tried: ${opts.label}`, paths: [] };
+  if (opts.detected) return { message: `Successfully installed ${opts.name}.`, paths: [] };
+  const probed = opts.probedDirs.length > 0 ? opts.probedDirs.join(', ') : 'the PATH directories';
+  return {
+    message: `Installed ${opts.name}, but the binary was not found in ${probed}. Click Detect or set the path manually.`,
+    paths: [],
+  };
+}
