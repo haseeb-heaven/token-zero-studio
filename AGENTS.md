@@ -2,6 +2,13 @@
 
 Guidance for agents working in this repository.
 
+## Read first (mandatory before any work in this repo)
+
+- `HERMES.md` — the working agreement: verify pipeline (`npm run test` + `npm run typecheck` + `npm run build`), coverage gate (80/75/75/80 incl. renderer), TDD pattern, commit style, canonical vocabulary, and verified pitfalls.
+- `CODEMAP.md` — the full backend/frontend file map: 27 agents, 13 compressors, the 34-channel IPC contract, every core module's job, launch lifecycle, and the test map.
+
+These two files are the authoritative orientation for this codebase. `.hermes/` (gitignored) holds the agent's local notes and plans.
+
 ## Agent skills
 
 ### Issue tracker
