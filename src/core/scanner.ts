@@ -20,7 +20,7 @@ import {
 export function scanPathVariable(agent: AgentDefinition, ctx: PlatformContext): string[] {
   const pathValue = ctx.env.PATH ?? ctx.env.Path ?? ctx.env.path ?? '';
   const merged = mergePathWithUserBins(pathValue, ctx.platform, ctx.homeDir);
-  const dirs = splitPathEnv(merged, ctx.platform);
+  const dirs = [...splitPathEnv(merged, ctx.platform), ...nodeVersionBinDirs(ctx)];
   const hits: string[] = [];
   for (const dir of dirs) {
     for (const exe of agent.executables) {
@@ -34,6 +34,31 @@ export function scanPathVariable(agent: AgentDefinition, ctx: PlatformContext): 
     }
   }
   return dedupe(hits, ctx.platform);
+}
+
+/**
+ * Enumerate nvm/fnm-managed node install dirs (e.g. ~/.nvm/versions/node/v22.5.0/bin)
+ * so npm-global binaries installed under a version manager are still found.
+ */
+export function nodeVersionBinDirs(ctx: PlatformContext): string[] {
+  const out: string[] = [];
+  const roots = [
+    joinPath(ctx.platform, ctx.homeDir, '.nvm', 'versions', 'node'),
+    joinPath(ctx.platform, ctx.homeDir, '.fnm', 'node-versions'),
+  ];
+  for (const root of roots) {
+    let versions: string[];
+    try {
+      versions = ctx.readdir(root);
+    } catch {
+      continue;
+    }
+    for (const v of versions) {
+      if (typeof v !== 'string') continue;
+      out.push(joinPath(ctx.platform, root, v, 'bin'));
+    }
+  }
+  return out;
 }
 
 /** Probe the agent's well-known install locations for the current platform. */

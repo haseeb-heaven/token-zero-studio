@@ -16,6 +16,7 @@ function fakeCtx(
   platform: 'darwin' | 'linux' | 'win32',
   files: Record<string, boolean>,
   env: Record<string, string> = {},
+  dirs: Record<string, string[]> = {},
 ): PlatformContext {
   const home = platform === 'win32' ? 'C:\\Users\\test' : '/Users/test';
   return {
@@ -24,7 +25,7 @@ function fakeCtx(
     env: { HOME: home, USERPROFILE: home, PATH: env.PATH ?? '', ...env },
     exists: (p) => !!files[p],
     isFile: (p) => !!files[p],
-    readdir: () => [],
+    readdir: (p) => dirs[p] ?? [],
   };
 }
 
@@ -155,6 +156,27 @@ describe('getProxyInstallOptions', () => {
         expect(idset.size, `${id}@${platform} distinct`).toBe(opts.length);
       }
     }
+  });
+
+  it('detects binaries under nvm-style node prefix and custom npm prefix', () => {
+    const ctx = fakeCtx('darwin', {
+      '/Users/test/.nvm/versions/node/v22.5.0/bin/codex': true,
+      '/Users/test/.yarn/bin/squeez': true,
+    }, { PATH: '/usr/bin:/bin', HOME: '/Users/test' }, {
+      '/Users/test/.nvm/versions/node': ['v22.5.0'],
+    });
+    const codexDef = {
+      id: 'codex', name: 'OpenAI Codex CLI', vendor: 'OpenAI', description: '', interfaceType: 'cli' as const,
+      launchStrategy: 'env' as const, executables: ['codex'], wellKnownPaths: {}, envStyle: 'openai' as const,
+      defaultArgs: [], configFileHint: '', defaultPort: 8989, accent: '', homepage: '',
+    };
+    const squeezDef = {
+      id: 'squeez', name: 'Squeez', vendor: 'Squeez', description: '', interfaceType: 'cli' as const,
+      launchStrategy: 'env' as const, executables: ['squeez'], wellKnownPaths: {}, envStyle: 'both' as const,
+      defaultArgs: [], configFileHint: '', defaultPort: 0, accent: '', homepage: '',
+    };
+    expect(scanAgent(codexDef, ctx).found).toBe(true);
+    expect(scanAgent(squeezDef, ctx).found).toBe(true);
   });
 
   it('pickPreferredInstallCommand returns first option command', () => {

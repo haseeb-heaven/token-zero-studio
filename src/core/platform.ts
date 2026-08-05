@@ -160,12 +160,18 @@ export function userBinDirs(platform: PlatformName, homeDir: string): string[] {
       `${homeDir}\\AppData\\Local\\Programs\\Python\\Python311\\Scripts`,
       `${homeDir}\\AppData\\Local\\npx`,
       `${homeDir}\\.cargo\\bin`,
+      `${homeDir}\\AppData\\Roaming\\yarn\\bin`,
+      `${homeDir}\\scoop\\shims`,
+      `${homeDir}\\AppData\\Roaming\\fnm\\aliases\\default\\bin`,
+      `${homeDir}\\AppData\\Local\\fnm_multishells`,
     ];
   }
   const dirs = [
     `${homeDir}/.local/bin`,
     `${homeDir}/.cargo/bin`,
     `${homeDir}/.npm-global/bin`,
+    `${homeDir}/.yarn/bin`,
+    `${homeDir}/.bun/bin`,
     `${homeDir}/Library/Python/3.13/bin`,
     `${homeDir}/Library/Python/3.12/bin`,
     `${homeDir}/Library/Python/3.11/bin`,
