@@ -298,7 +298,7 @@ select option { background: var(--bg-2); }
 
 /* ============================ Logs ============================== */
 #logs-panel {
-  flex: 0 0 218px; display: flex; flex-direction: column;
+  flex: 0 0 180px; display: flex; flex-direction: column;
   background: var(--bg-1); border-top: 1px solid var(--border);
   transition: flex-basis 0.15s ease;
 }
@@ -307,23 +307,39 @@ select option { background: var(--bg-2); }
 .logs-toolbar {
   display: flex; align-items: center; gap: 10px;
   padding: 6px 12px; border-bottom: 1px solid var(--border);
-  min-height: 32px;
+  min-height: 32px; flex: 0 0 auto;
 }
 .logs-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: var(--text-2); }
 .logs-toolbar select { width: auto; padding: 3px 8px; font-size: 11.5px; }
 #logs-view {
   flex: 1; overflow-y: auto; overflow-x: hidden;
-  padding: 8px 12px; max-height: 180px;
-  font-family: var(--mono); font-size: 11.6px; line-height: 1.55;
+  padding: 6px 12px; max-height: 150px;
+  font-family: var(--mono); font-size: 11.5px; line-height: 1.5;
 }
-.log-line { display: flex; gap: 8px; padding: 1px 0; }
-.log-time { color: var(--text-2); flex: 0 0 auto; }
-.log-source { flex: 0 0 52px; color: var(--accent-2); overflow: hidden; text-overflow: ellipsis; }
-.log-msg { white-space: pre-wrap; word-break: break-word; color: var(--text-1); }
+.log-line { display: flex; gap: 8px; padding: 1px 0; transition: background 0.1s; border-radius: 3px; }
+.log-line:hover { background: var(--bg-2); }
+.log-time { color: var(--text-2); flex: 0 0 auto; font-size: 10.5px; }
+.log-source { flex: 0 0 48px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10.5px; }
+.log-msg { white-space: pre-wrap; word-break: break-word; flex: 1; }
+
+.log-info .log-source { color: var(--accent-2); }
 .log-info .log-msg { color: var(--text-1); }
+.log-warn .log-source { color: var(--warn); }
 .log-warn .log-msg { color: var(--warn); }
+.log-error .log-source { color: var(--err); }
 .log-error .log-msg { color: var(--err); }
+.log-debug .log-source { color: var(--text-2); }
 .log-debug .log-msg { color: var(--text-2); }
+
+/* Log level badge */
+.log-line::before {
+  content: ''; display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; margin-top: 5px; flex: 0 0 auto;
+}
+.log-info::before { background: var(--accent-2); }
+.log-warn::before { background: var(--warn); }
+.log-error::before { background: var(--err); }
+.log-debug::before { background: var(--text-2); }
 
 /* ============================ Modals ============================ */
 .modal-overlay {
@@ -357,23 +373,171 @@ select option { background: var(--bg-2); }
 .toast-err { border-left: 3px solid var(--err); }
 @keyframes toast-in { from { transform: translateY(8px); opacity: 0; } }
 
-/* ============================ Navigation & Dashboard ============================ */
+/* ============================ Navigation Tabs ============================ */
 .top-nav-tabs {
-  display: flex; align-items: center; gap: 6px; margin-left: 18px;
+  display: flex; align-items: center; gap: 4px; margin-left: 18px;
+  background: var(--bg-2); padding: 3px; border-radius: var(--radius-sm);
 }
 .nav-tab {
   display: inline-flex; align-items: center; gap: 6px;
-  padding: 6px 14px; border-radius: var(--radius-sm);
-  background: transparent; border: 1px solid transparent;
-  color: var(--text-1); font-size: 13px; font-weight: 600;
-  cursor: pointer; transition: all 0.12s ease;
+  padding: 7px 16px; border-radius: 6px;
+  background: transparent; border: none;
+  color: var(--text-1); font-size: 12.5px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s ease;
+  white-space: nowrap;
 }
-.nav-tab:hover { background: var(--bg-2); color: var(--text-0); }
+.nav-tab:hover { background: var(--bg-3); color: var(--text-0); }
 .nav-tab.active {
   background: var(--bg-1); border-color: var(--border-strong);
-  color: var(--accent); box-shadow: var(--shadow);
+  color: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+}
+.nav-tab span { pointer-events: none; }
+
+/* ============================ View Panes ============================= */
+.view-pane {
+  flex: 1; overflow-y: auto; padding: 20px 24px 30px; min-width: 0;
+  background: var(--bg-0);
 }
 
+/* ============================ Workflow view ========================== */
+#workflow-view {
+  flex: 1; display: flex; flex-direction: row !important;
+  min-height: 0; overflow: hidden; padding: 0 !important;
+}
+.workflow-sidebar {
+  width: 200px; flex: 0 0 auto;
+  display: flex; flex-direction: column;
+  background: var(--bg-1); border-right: 1px solid var(--border);
+}
+.workflow-sidebar-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-bottom: 1px solid var(--border);
+}
+.workflow-sidebar-title {
+  font-size: 11px; font-weight: 700; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-2);
+}
+.workflow-tabs-list {
+  flex: 1; overflow-y: auto; padding: 4px 6px;
+}
+.workflow-tab-item {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 10px; border-radius: 6px;
+  cursor: pointer; margin-bottom: 2px;
+  transition: background 0.1s;
+  font-size: 12.5px;
+}
+.workflow-tab-item:hover { background: var(--bg-2); }
+.workflow-tab-item.active { background: var(--accent-soft); color: var(--accent); }
+.workflow-tab-item .wf-tab-icon { flex: 0 0 auto; font-size: 14px; }
+.workflow-tab-item .wf-tab-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.workflow-tab-item .wf-tab-state {
+  width: 7px; height: 7px; border-radius: 50%; flex: 0 0 auto;
+}
+.wf-tab-state.running { background: var(--ok); box-shadow: 0 0 5px var(--ok); }
+.wf-tab-state.stopped { background: var(--text-2); }
+.wf-tab-state.error { background: var(--err); }
+
+.workflow-main {
+  flex: 1; display: flex; flex-direction: column;
+  min-width: 0; position: relative;
+}
+.workflow-empty {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  color: var(--text-1); padding: 40px;
+}
+.workflow-terminal {
+  flex: 1; display: flex; flex-direction: column;
+  min-height: 0;
+}
+.workflow-terminal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--bg-1); border-bottom: 1px solid var(--border);
+  font-size: 13px; font-weight: 600;
+}
+.workflow-terminal-actions { display: flex; gap: 4px; }
+.workflow-xterm {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 0 0;
+  background: #0a0e14;
+  overflow: hidden;
+}
+.workflow-xterm .xterm { height: 100%; padding: 8px 12px; }
+.workflow-xterm .xterm-viewport { overflow-y: auto !important; }
+
+/* Workflow context menu */
+.workflow-context-menu {
+  background: var(--bg-2); border: 1px solid var(--border-strong);
+  border-radius: 8px; box-shadow: var(--shadow);
+  padding: 4px; min-width: 160px;
+}
+.ctx-menu-item {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; padding: 7px 10px;
+  background: transparent; border: none; border-radius: 5px;
+  color: var(--text-0); font-family: var(--font); font-size: 12.5px;
+  cursor: pointer; text-align: left;
+}
+.ctx-menu-item:hover { background: var(--accent-soft); }
+.ctx-icon { flex: 0 0 auto; font-size: 13px; }
+.section-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  margin-bottom: 18px; gap: 12px;
+}
+.section-head h2 { font-size: 18px; font-weight: 680; }
+.section-head p { margin-top: 4px; max-width: 500px; }
+
+/* Compressor cards grid */
+.compressors-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 12px; margin-bottom: 18px;
+}
+.compressor-card { margin-bottom: 0; }
+.compressor-header { display: flex; gap: 12px; align-items: flex-start; }
+.compressor-icon {
+  width: 38px; height: 38px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 16px; flex: 0 0 auto;
+}
+.compressor-info { flex: 1; min-width: 0; }
+.compressor-name { font-weight: 600; font-size: 13.5px; }
+.compressor-desc { font-size: 11.8px; margin-top: 2px; }
+.compressor-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+.compressor-actions { display: flex; gap: 6px; flex: 0 0 auto; align-items: flex-start; }
+.compressor-status { margin-top: 8px; }
+.compressor-install { margin-top: 0; }
+
+/* Settings sections */
+.settings-grid { display: flex; flex-direction: column; gap: 12px; max-width: 620px; }
+.settings-section { margin-bottom: 0; }
+.settings-section h3 {
+  font-size: 11.5px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-2); margin-bottom: 10px;
+}
+.settings-section select,
+.settings-section input[type="text"],
+.settings-section input[type="number"] {
+  max-width: 400px;
+}
+.section-subheading {
+  font-size: 13px; font-weight: 600; color: var(--text-1);
+  margin: 16px 0 8px; padding-top: 8px; border-top: 1px solid var(--border);
+}
+
+/* Custom entries list */
+.custom-entries-list { margin-top: 8px; }
+.custom-entry-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 0; border-bottom: 1px solid var(--border);
+}
+.custom-entry-row:last-child { border-bottom: none; }
+.custom-entry-row span { flex: 1; }
+.custom-entry-row .btn { margin-left: 6px; }
+
+/* Dashboard view */
 #dashboard-view {
   display: flex; flex-direction: column; flex: 1; min-height: 0;
   padding: 16px 20px; overflow-y: auto; background: var(--bg-0);
@@ -382,6 +546,8 @@ select option { background: var(--bg-2); }
 .align-center { align-items: center; }
 .margin-bottom-16 { margin-bottom: 16px; }
 .margin-top-6 { margin-top: 6px; }
+.flex-1 { flex: 1 1 0%; min-width: 0; }
+.overflow-y-auto { overflow-y: auto; }
 .padding-20 { padding: 20px; }
 .padding-40 { padding: 40px; }
 .text-center { text-align: center; }

@@ -5,6 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:" />
   <title>TokenZero - Studio</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="xterm.css" />
 </head>
 <body>
   <div id="app">
@@ -16,11 +17,14 @@
           <h1>TokenZero - Studio</h1>
           <span class="brand-sub">Context optimization proxy launcher for AI coding agents</span>
         </div>
-        <nav class="top-nav-tabs">
-          <button id="tab-btn-agents" class="nav-tab active"><span>🤖 Agents</span></button>
-          <button id="tab-btn-dashboard" class="nav-tab"><span>📊 Live Dashboard</span></button>
-        </nav>
       </div>
+      <nav class="top-nav-tabs">
+        <button id="tab-btn-agents" class="nav-tab active"><span>🤖</span> Agents</button>
+        <button id="tab-btn-compressors" class="nav-tab"><span>🧩</span> Compressors</button>
+        <button id="tab-btn-workflow" class="nav-tab"><span>🖥️</span> Workflow</button>
+        <button id="tab-btn-settings" class="nav-tab"><span>⚙️</span> Settings</button>
+        <button id="tab-btn-dashboard" class="nav-tab"><span>📊</span> Dashboard</button>
+      </nav>
       <div class="topbar-status">
         <div id="headroom-status" class="pill pill-unknown" title="Token Optimizer detection">
           <span class="dot"></span><span id="headroom-status-text">Detecting Proxy…</span>
@@ -100,12 +104,23 @@
               <button id="btn-clear-path" class="btn btn-ghost" title="Clear explicit path (back to auto-detect)">✕</button>
             </div>
             <div id="detected-paths" class="detected-paths"></div>
+            <div class="field" id="agent-install-options-field">
+              <label>Install method</label>
+              <select id="agent-install-option"></select>
+              <div class="small muted" id="agent-install-option-note" style="margin-top:6px;"></div>
+              <button id="btn-install-agent" class="btn btn-primary small-btn" style="margin-top:8px;">⚡ Install agent via CLI</button>
+              <span id="agent-install-status" class="small muted" style="margin-left:8px;"></span>
+            </div>
             <div class="grid-2">
               <div class="field">
                 <label for="fld-port">Proxy port</label>
                 <input id="fld-port" type="number" min="1" max="65535" />
                 <span id="port-status" class="small muted"></span>
                 <button id="btn-kill-port" class="btn btn-danger-ghost small-btn hidden" title="Kill processes on this port">Kill port</button>
+                <label class="toggle small" style="margin-top:8px;" title="When enabled a free port is chosen automatically; disable to force the port above to be used for new launches.">
+                  <input id="tgl-auto-port" type="checkbox" checked />
+                  <span>Auto-assign free port for new launches</span>
+                </label>
               </div>
               <div class="field">
                 <label for="fld-workdir">Working directory</label>
@@ -124,28 +139,10 @@
             </div>
           </section>
 
-          <!-- Token Optimizer proxy options -->
+          <!-- Headroom proxy options -->
           <section class="card">
-            <div class="field">
-              <label for="fld-active-proxy"><strong>Active Token Optimizer Proxy</strong></label>
-              <select id="fld-active-proxy">
-                <option value="headroom">Headroom — Context-freezing & LLM token compression (pip install headroom-ai)</option>
-                <option value="rtk">RTK (Rust Token Killer) — Shell command output compressor (brew install rtk)</option>
-                <option value="pxpipe">PxPipe — Multimodal PNG context proxy (npx pxpipe-proxy)</option>
-                <option value="llmlingua">LLMLingua — Microsoft prompt & KV-cache compressor (pip install llmlingua)</option>
-                <option value="tokenshift">TokenShift — Cross-agent optimization & governance</option>
-                <option value="caveman">Caveman — Output compression skill for concise responses</option>
-                <option value="leanctx">LeanCTX — Shell-hook MCP context compressor</option>
-              </select>
-            </div>
+            <h3>Proxy options</h3>
             <div id="proxy-desc-banner" class="small muted" style="margin-bottom: 12px; font-style: italic;"></div>
-            <div id="proxy-install-banner" class="alert-box alert-warning hidden" style="margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 6px;">
-              <div>
-                <strong id="proxy-not-found-title" style="color: #ef4444;">⚠️ Proxy Not Found</strong>
-                <div id="proxy-not-found-desc" class="small muted">This Token Cost Optimizer is not detected on your system PATH.</div>
-              </div>
-              <button id="btn-install-proxy" class="btn btn-primary small-btn" style="white-space: nowrap;">⚡ Install via CLI</button>
-            </div>
             <div id="headroom-options-row" class="grid-2">
               <div class="field">
                 <label for="fld-mode">Optimization mode</label>
@@ -183,7 +180,7 @@
 
           <!-- Launch bar -->
           <section class="launch-bar">
-            <select id="launch-bar-proxy-select" class="launch-proxy-dropdown" title="Select Token Optimizer Proxy">
+            <select id="launch-bar-compressor-select" class="launch-proxy-dropdown" title="Select Compressor">
               <option value="headroom">⚡ Headroom</option>
               <option value="rtk">🗡️ RTK</option>
               <option value="pxpipe">🖼️ PxPipe</option>
@@ -191,8 +188,15 @@
               <option value="tokenshift">🛡️ TokenShift</option>
               <option value="caveman">🦴 Caveman</option>
               <option value="leanctx">🍃 LeanCTX</option>
+              <option value="supercompress">⚡ SuperCompress</option>
+              <option value="selective-ctx">🎯 Selective Context</option>
+              <option value="squeez">🗜️ Squeez</option>
+              <option value="omni-route">🔄 OmniRoute</option>
+              <option value="graphify">🕸️ Graphify</option>
+              <option value="ponytail">🦄 Ponytail</option>
             </select>
-            <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch with Token Optimizer</button>
+            <button id="btn-launch" class="btn btn-primary btn-launch">▶ Launch</button>
+            <button id="btn-launch-workflow" class="btn btn-primary" title="Launch in embedded Workflow view (no external terminal)">🖥️ Workflow</button>
             <button id="btn-stop" class="btn btn-danger hidden">■ Stop</button>
             <span id="launch-status" class="muted"></span>
             <span class="flex-spacer"></span>
@@ -267,10 +271,95 @@
           </div>
         </div>
       </main>
+
+      <!-- ======================= Token Compressors view ======================= -->
+      <main id="compressors-view" class="view-pane hidden" style="padding:0;display:flex;flex-direction:row;">
+        <aside id="compressor-sidebar" class="sidebar" style="width:240px;">
+          <div class="sidebar-search">
+            <input id="compressor-filter" type="search" placeholder="Filter compressors..." autocomplete="off" />
+          </div>
+          <div class="sidebar-section-label">ALL COMPRESSORS</div>
+          <nav id="compressor-list" class="agent-list" aria-label="Available compressors"></nav>
+          <button id="btn-add-custom-proxy" class="btn btn-primary" style="margin:8px;width:calc(100% - 16px);flex-shrink:0;">+ Add custom</button>
+        </aside>
+        <main id="compressor-detail" class="flex-1 overflow-y-auto padding-20">
+          <div id="compressor-detail-empty" class="empty-state">
+            <div style="font-size:48px;margin-bottom:12px;">🧩</div>
+            <h2>Select a compressor</h2>
+            <p class="muted">Pick a token compressor from the list and configure its settings.</p>
+          </div>
+          <div id="compressor-detail-content" class="hidden">
+            <div class="card" id="compressor-info-card"></div>
+            <div class="card" id="compressor-config-card">
+              <h3>Configuration</h3>
+              <div class="field"><label>Detect on system</label><button id="btn-detect-compressor" class="btn">Scan</button><span id="compressor-detect-status" class="muted small" style="margin-left:10px;"></span></div>
+              <div class="field"><label>Binary path</label><input id="compressor-binary-path" type="text" placeholder="Empty = auto-detect" /></div>
+              <div class="field">
+                <label>Install instructions</label>
+                <code id="compressor-install-cmd" class="config-hint"></code>
+              </div>
+              <div class="field" id="compressor-install-options-field">
+                <label>Install method</label>
+                <select id="compressor-install-option"></select>
+                <div class="small muted" id="compressor-install-option-note" style="margin-top:6px;"></div>
+              </div>
+              <div class="field-row" style="margin-top:10px;gap:8px;flex-wrap:wrap;">
+                <button id="btn-install-compressor" class="btn btn-primary small-btn">⚡ Install via CLI</button>
+                <button id="btn-save-compressor" class="btn small-btn">💾 Save path</button>
+                <button id="btn-set-default-compressor" class="btn btn-ghost small-btn">⭐ Set as default</button>
+              </div>
+              <div class="small muted" style="margin-top:10px;" id="compressor-save-status"></div>
+            </div>
+          </div>
+        </main>
+        
+      </main>
+
+      <!-- ======================= Settings view ======================= -->
+      <main id="settings-view" class="view-pane hidden">
+        <div class="section-head">
+          <div>
+            <h2>⚙️ Studio Settings</h2>
+            <p class="muted">Application-wide configuration for launch behaviour, paths and appearance.</p>
+          </div>
+        </div>
+        <div id="settings-content" class="settings-grid"></div>
+      </main>
+
+      <!-- ======================= Workflow view ======================= -->
+      <main id="workflow-view" class="view-pane hidden" style="padding:0;display:flex;flex-direction:row;">
+        <div id="workflow-sidebar" class="workflow-sidebar">
+          <div class="workflow-sidebar-header">
+            <span class="workflow-sidebar-title">Sessions</span>
+            <button id="wf-btn-new-session" class="btn btn-ghost small-btn" title="Launch new agent session">+</button>
+          </div>
+          <div id="workflow-tabs" class="workflow-tabs-list"></div>
+        </div>
+        <div id="workflow-main" class="workflow-main">
+          <div id="workflow-empty" class="workflow-empty">
+            <div style="font-size:48px;margin-bottom:12px;">🖥️</div>
+            <h3>No active sessions</h3>
+            <p class="muted">Go to <strong>Agents</strong> tab and launch an agent, or click <strong>+</strong> above.</p>
+          </div>
+          <div id="workflow-terminal" class="workflow-terminal hidden">
+            <div id="workflow-terminal-header" class="workflow-terminal-header">
+              <span id="wf-session-title"></span>
+              <div class="workflow-terminal-actions">
+                <button id="wf-btn-rename" class="btn btn-ghost small-btn" title="Rename session">✏️</button>
+                <button id="wf-btn-restart" class="btn btn-ghost small-btn" title="Restart session">🔄</button>
+                <button id="wf-btn-close" class="btn btn-danger-ghost small-btn" title="Close session">✕</button>
+              </div>
+            </div>
+            <!-- Real terminal surface (xterm.js) — agent TUI owns its own prompt/input -->
+            <div id="workflow-xterm" class="workflow-xterm"></div>
+          </div>
+        </div>
+      </main>
+
     </div>
 
     <!-- ======================= Logs panel ======================= -->
-    <section id="logs-panel" class="collapsed">
+    <section id="logs-panel">
       <div class="logs-toolbar">
         <span class="logs-title">Logs</span>
         <select id="log-level-filter">
