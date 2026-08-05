@@ -6,6 +6,7 @@ import {
   exeNames,
   expandPath,
   joinPath,
+  mergePathWithUserBins,
   normalizeForCompare,
   splitPathEnv,
 } from './platform';
@@ -13,10 +14,13 @@ import {
 /**
  * Search every directory on PATH for the agent's executables.
  * Returns verified absolute paths in PATH order.
+ * Also probes user-level bin dirs (pip/uv/npm/cargo) that Electron's PATH
+ * often omits after a fresh install.
  */
 export function scanPathVariable(agent: AgentDefinition, ctx: PlatformContext): string[] {
   const pathValue = ctx.env.PATH ?? ctx.env.Path ?? ctx.env.path ?? '';
-  const dirs = splitPathEnv(pathValue, ctx.platform);
+  const merged = mergePathWithUserBins(pathValue, ctx.platform, ctx.homeDir);
+  const dirs = splitPathEnv(merged, ctx.platform);
   const hits: string[] = [];
   for (const dir of dirs) {
     for (const exe of agent.executables) {

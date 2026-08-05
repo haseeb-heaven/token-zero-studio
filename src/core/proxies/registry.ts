@@ -40,7 +40,7 @@ export const PROXIES: ProxyDefinition[] = [
       return args;
     },
     envStyle: 'both',
-    installInstructions: 'pip install headroom-ai',
+    installInstructions: 'uv tool install "headroom-ai[all]"  |  pip install "headroom-ai[all]"  |  pipx install "headroom-ai[all]"',
     accent: '#38bdf8',
     homepage: 'https://github.com',
   },
@@ -84,7 +84,7 @@ export const PROXIES: ProxyDefinition[] = [
     defaultFlags: {},
     buildStartArgs: () => [], // RTK doesn't start a server
     envStyle: 'none',
-    installInstructions: 'brew install rtk  (macOS) | curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh  (Linux)',
+    installInstructions: 'brew install rtk-ai/tap/rtk  |  curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh',
     accent: '#fb7185',
     homepage: 'https://github.com/rtk-ai/rtk',
   },
@@ -180,6 +180,147 @@ export const PROXIES: ProxyDefinition[] = [
     accent: '#8b5cf6',
     homepage: 'https://leanctx.com/docs/getting-started/',
   },
+  {
+    id: 'supercompress',
+    name: 'SuperCompress',
+    description: 'High-ratio context compressor server that merges selective-context-style compression.',
+    mode: 'server',
+    executables: ['supercompress', 'super-compress'],
+    wellKnownPaths: {
+      win32: ['%LOCALAPPDATA%\\supercompress\\supercompress.exe', '~\\AppData\\Roaming\\npm\\supercompress.cmd'],
+      darwin: ['/usr/local/bin/supercompress', '/opt/homebrew/bin/supercompress', '~/.local/bin/supercompress'],
+      linux: ['/usr/local/bin/supercompress', '~/.local/bin/supercompress'],
+    },
+    detectCommand: 'supercompress --version',
+    defaultPort: 8101,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'pip install supercompress (or follow vendor docs)',
+    accent: '#2dd4bf',
+    homepage: 'https://github.com',
+  },
+  {
+    id: 'selective-ctx',
+    name: 'Selective Context',
+    description: 'Selective-Ctx — layer-selective context compression for LLMs.',
+    mode: 'server',
+    executables: ['selective-ctx', 'selective_ctx'],
+    wellKnownPaths: {
+      win32: ['~\\AppData\\Roaming\\Python\\Scripts\\selective-ctx.exe'],
+      darwin: ['/usr/local/bin/selective-ctx', '/opt/homebrew/bin/selective-ctx', '~/.local/bin/selective-ctx'],
+      linux: ['/usr/local/bin/selective-ctx', '~/.local/bin/selective-ctx'],
+    },
+    detectCommand: 'selective-ctx --version',
+    defaultPort: 8102,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'pip install selective-context (See https://github.com/liyucheng09/Selective_Context)',
+    accent: '#a3e635',
+    homepage: 'https://github.com/liyucheng09/Selective_Context',
+  },
+  {
+    id: 'squeez',
+    name: 'Squeez',
+    description: 'SqueezeLLM-style KV/context squeezer exposed as a local compression proxy.',
+    mode: 'server',
+    executables: ['squeez', 'squeez-proxy'],
+    wellKnownPaths: {
+      win32: ['~\\AppData\\Roaming\\Python\\Scripts\\squeez.exe', '%LOCALAPPDATA%\\npm\\squeez.cmd'],
+      darwin: ['/usr/local/bin/squeez', '/opt/homebrew/bin/squeez', '~/.local/bin/squeez'],
+      linux: ['/usr/local/bin/squeez', '~/.local/bin/squeez'],
+    },
+    detectCommand: 'squeez --version',
+    defaultPort: 8103,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'pip install squeez (or follow vendor docs)',
+    accent: '#f472b6',
+    homepage: 'https://github.com',
+  },
+  {
+    id: 'omni-route',
+    name: 'OmniRoute',
+    description: 'Local OpenAI-compatible routing/compression gateway for agent traffic.',
+    mode: 'server',
+    executables: ['omni-route', 'omniroute'],
+    wellKnownPaths: {
+      win32: ['%LOCALAPPDATA%\\omni-route\\omni-route.exe', '~\\AppData\\Roaming\\npm\\omni-route.cmd'],
+      darwin: ['/usr/local/bin/omni-route', '/opt/homebrew/bin/omni-route', '~/.local/bin/omni-route'],
+      linux: ['/usr/local/bin/omni-route', '~/.local/bin/omni-route'],
+    },
+    detectCommand: 'omni-route --version',
+    defaultPort: 8104,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'npm install -g omni-route (or follow vendor docs)',
+    accent: '#fb923c',
+    homepage: 'https://github.com',
+  },
+  {
+    id: 'graphify',
+    name: 'Graphify',
+    description: 'Graph-based context compression proxy that prunes tokenised context.',
+    mode: 'server',
+    executables: ['graphify', 'graphify-proxy'],
+    wellKnownPaths: {
+      win32: ['%LOCALAPPDATA%\\graphify\\graphify.exe', '~\\AppData\\Roaming\\npm\\graphify.cmd'],
+      darwin: ['/usr/local/bin/graphify', '/opt/homebrew/bin/graphify', '~/.local/bin/graphify'],
+      linux: ['/usr/local/bin/graphify', '~/.local/bin/graphify'],
+    },
+    detectCommand: 'graphify --version',
+    defaultPort: 8105,
+    defaultFlags: {},
+    buildStartArgs: (port, flags) => {
+      const args = ['--port', String(port)];
+      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
+      return args;
+    },
+    envStyle: 'both',
+    installInstructions: 'npm install -g graphify (or follow vendor docs)',
+    accent: '#e879f9',
+    homepage: 'https://github.com',
+  },
+  {
+    id: 'ponytail',
+    name: 'Ponytail',
+    description: 'Shell-level output/service compressor that wraps agent commands.',
+    mode: 'wrapper',
+    executables: ['ponytail'],
+    wellKnownPaths: {
+      win32: ['~\\AppData\\Roaming\\npm\\ponytail.cmd', '%LOCALAPPDATA%\\npx\\ponytail.cmd'],
+      darwin: ['/usr/local/bin/ponytail', '/opt/homebrew/bin/ponytail', '~/.local/bin/ponytail'],
+      linux: ['/usr/local/bin/ponytail', '~/.local/bin/ponytail'],
+    },
+    detectCommand: 'ponytail --version',
+    defaultPort: 0,
+    defaultFlags: {},
+    buildStartArgs: () => [],
+    envStyle: 'none',
+    installInstructions: 'npm install -g ponytail (or follow vendor docs)',
+    accent: '#fbbf24',
+    homepage: 'https://github.com',
+  },
+
 ];
 
 const byId = new Map(PROXIES.map((p) => [p.id, p]));
