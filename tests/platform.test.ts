@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
+  currentPlatformContext,
+  enumerateDrives,
   exeNames,
   expandPath,
   joinPath,
   normalizeForCompare,
   pathSeparator,
   splitPathEnv,
+  userBinDirs,
 } from '../src/core/platform';
 
 describe('pathSeparator', () => {
@@ -92,5 +95,45 @@ describe('normalizeForCompare', () => {
   });
   it('keeps case on POSIX', () => {
     expect(normalizeForCompare('/A/b', 'linux')).not.toBe(normalizeForCompare('/a/b', 'linux'));
+  });
+});
+
+describe('userBinDirs', () => {
+  it('covers the common package-manager bin dirs on each platform', () => {
+    const mac = userBinDirs('darwin', '/Users/u');
+    expect(mac).toEqual(expect.arrayContaining(['/Users/u/.local/bin', '/Users/u/.cargo/bin', '/opt/homebrew/bin']));
+    const win = userBinDirs('win32', 'C:\\Users\\u');
+    expect(win.some((d) => d.includes('AppData') && d.includes('npm'))).toBe(true);
+    const linux = userBinDirs('linux', '/home/u');
+    expect(linux).toEqual(expect.arrayContaining(['/home/u/.local/bin', '/home/u/.cargo/bin', '/usr/local/bin']));
+  });
+});
+
+describe('enumerateDrives', () => {
+  it('returns a single root on POSIX', () => {
+    expect(enumerateDrives('darwin', () => true)).toEqual(['/']);
+  });
+  it('enumerates existing letters on Windows', () => {
+    const drives = enumerateDrives('win32', (p) => p === 'C:\\' || p === 'D:\\');
+    expect(drives).toEqual(['C:\\', 'D:\\']);
+  });
+});
+
+describe('currentPlatformContext', () => {
+  it('builds a context that resolves the real environment', () => {
+    const ctx = currentPlatformContext((p) => p === process.cwd());
+    expect(ctx.platform).toBe(process.platform);
+    expect(ctx.homeDir.length).toBeGreaterThan(0);
+    expect(ctx.env.PATH ?? ctx.env.Path).toBeTruthy();
+    expect(ctx.exists(process.cwd())).toBe(true);
+    expect(ctx.exists('/definitely/not/a/real/path')).toBe(false);
+  });
+
+  it('isFile/readdir/execCommand behave safely', () => {
+    const ctx = currentPlatformContext(() => true);
+    expect(typeof ctx.isFile).toBe('function');
+    expect(typeof ctx.readdir).toBe('function');
+    // execCommand returns '' for a failing command without throwing.
+    expect(ctx.execCommand?.('__definitely_not_a_command__ 2>/dev/null')).toBe('');
   });
 });
