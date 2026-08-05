@@ -45,18 +45,15 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   pxpipe: {
     darwin: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
-      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
       { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
     ],
     linux: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
-      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
       { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
     ],
     win32: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe axios' },
-      { id: 'npm-bin', label: 'npm global (pxpipe-proxy)', command: 'npm install -g pxpipe-proxy || npm install -g @pxpipe/proxy' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
       { id: 'npx', label: 'npx (no install)', command: 'cmd /c npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
     ],
   },
@@ -72,7 +69,6 @@ const CATALOG: Record<string, PlatformMap> = {
       { id: 'cargo', label: 'Cargo (from git)', command: 'cargo install --git https://github.com/rtk-ai/rtk --branch master rtk' },
     ],
     win32: [
-      { id: 'ps1', label: 'PowerShell installer', command: 'powershell -NoProfile -Command "iwr -useb https://raw.githubusercontent.com/rtk-ai/rtk/master/install.ps1 | iex"' },
       { id: 'cargo', label: 'Cargo (from git)', command: 'cargo install --git https://github.com/rtk-ai/rtk --branch master rtk' },
     ],
   },
@@ -95,18 +91,13 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   tokenshift: {
     darwin: [
-      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh', note: 'Installs to ~/.local/bin' },
-      { id: 'brew', label: 'Homebrew', command: 'brew install pointfive/tap/tokenshift || brew install tokenshift' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'open https://www.pointfive.co/tokenshift', note: 'No verified npm/pip/brew package — install from the official site' },
     ],
     linux: [
-      { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://www.pointfive.co/tokenshift/install.sh | sh', note: 'Installs to ~/.local/bin' },
-      { id: 'brew', label: 'Homebrew', command: 'brew install pointfive/tap/tokenshift || brew install tokenshift' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'xdg-open https://www.pointfive.co/tokenshift', note: 'No verified npm/pip/brew package — install from the official site' },
     ],
     win32: [
-      { id: 'ps1', label: 'PowerShell installer (recommended)', command: 'powershell -NoProfile -Command "curl -fsSL https://www.pointfive.co/tokenshift/install.ps1 | iex"' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g tokenshift-cli || npm install -g @pointfive/tokenshift' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'start https://www.pointfive.co/tokenshift', note: 'No verified npm/pip/brew package — install from the official site' },
     ],
   },
   caveman: {
@@ -127,18 +118,16 @@ const CATALOG: Record<string, PlatformMap> = {
   leanctx: {
     darwin: [
       { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://leanctx.com/install.sh | sh', note: 'Installs to ~/.local/bin' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g leanctx' },
       { id: 'pip', label: 'pip', command: 'pip3 install leanctx || python3 -m pip install leanctx || py -m pip install leanctx' },
-      { id: 'brew', label: 'Homebrew', command: 'brew install leanctx/tap/leanctx || brew install lean-ctx' },
     ],
     linux: [
       { id: 'curl', label: 'Install script (recommended)', command: 'curl -fsSL https://leanctx.com/install.sh | sh', note: 'Installs to ~/.local/bin' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g leanctx' },
       { id: 'pip', label: 'pip', command: 'pip3 install leanctx || python3 -m pip install leanctx || py -m pip install leanctx' },
-      { id: 'brew', label: 'Homebrew', command: 'brew install leanctx/tap/leanctx || brew install lean-ctx' },
     ],
     win32: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g lean-ctx || npm install -g @leanctx/cli' },
+      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g leanctx' },
       { id: 'pip', label: 'pip', command: 'py -m pip install leanctx || python -m pip install leanctx' },
     ],
   },
@@ -147,17 +136,14 @@ const CATALOG: Record<string, PlatformMap> = {
       { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install --python 3.13 supercompress || uv tool install supercompress', note: 'Installs into ~/.local/bin' },
       { id: 'pip', label: 'pip', command: 'pip3 install supercompress || python3 -m pip install supercompress' },
       { id: 'pipx', label: 'pipx', command: 'pipx install supercompress' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g supercompress' },
     ],
     linux: [
       { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install supercompress', note: 'Installs into ~/.local/bin' },
       { id: 'pip', label: 'pip', command: 'pip3 install supercompress || python3 -m pip install supercompress' },
       { id: 'pipx', label: 'pipx', command: 'pipx install supercompress' },
-      { id: 'npm', label: 'npm global', command: 'npm install -g supercompress' },
     ],
     win32: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g supercompress' },
-      { id: 'uv', label: 'uv tool', command: 'uv tool install supercompress', note: 'Installs into %USERPROFILE%\\.local\\bin' },
+      { id: 'uv', label: 'uv tool (recommended)', command: 'uv tool install supercompress', note: 'Installs into %USERPROFILE%\\.local\\bin' },
       { id: 'pip', label: 'pip', command: 'py -m pip install supercompress || python -m pip install supercompress' },
     ],
   },
@@ -199,19 +185,13 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   'omni-route': {
     darwin: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
-      { id: 'brew', label: 'Homebrew', command: 'brew install omni-route/tap/omni-route || brew install omni-route' },
-      { id: 'pip', label: 'pip', command: 'pip3 install omni-route || python3 -m pip install omni-route' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'open https://github.com', note: 'No verified npm/pip/brew package — check the project docs' },
     ],
     linux: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
-      { id: 'pip', label: 'pip', command: 'pip3 install omni-route || python3 -m pip install omni-route' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'xdg-open https://github.com', note: 'No verified npm/pip/brew package — check the project docs' },
     ],
     win32: [
-      { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g omni-route' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y omni-route --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'docs', label: 'Manual install (docs)', command: 'start https://github.com', note: 'No verified npm/pip/brew package — check the project docs' },
     ],
   },
   graphify: {

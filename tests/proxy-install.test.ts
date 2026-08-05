@@ -63,10 +63,10 @@ describe('getProxyInstallOptions', () => {
     }
   });
 
-  it('offers multiple install sources for every compressor on darwin (so the UI shows a fallback chain)', () => {
+  it('offers multiple install sources for every compressor on darwin where more than one real source exists', () => {
     const ids = [
-      'headroom', 'pxpipe', 'rtk', 'llmlingua', 'tokenshift', 'caveman', 'leanctx',
-      'supercompress', 'selective-ctx', 'squeez', 'omni-route', 'graphify', 'ponytail',
+      'headroom', 'pxpipe', 'rtk', 'llmlingua', 'caveman', 'leanctx',
+      'supercompress', 'selective-ctx', 'squeez', 'graphify', 'ponytail',
     ];
     for (const id of ids) {
       const opts = getProxyInstallOptions(id, 'darwin');
@@ -79,7 +79,7 @@ describe('getProxyInstallOptions', () => {
   });
 
   it('prefers durable PATH installs (npm/uv/pip) over ephemeral npx as the first option', () => {
-    for (const id of ['supercompress', 'squeez', 'omni-route', 'graphify', 'ponytail']) {
+    for (const id of ['supercompress', 'squeez', 'graphify', 'ponytail']) {
       const first = pickPreferredInstallCommand(id, 'darwin');
       expect(first, id).toMatch(/npm install|uv tool|pip3 install|cargo install|curl|brew install/);
       expect(first, id).not.toMatch(/^npx /);
@@ -120,6 +120,40 @@ describe('getProxyInstallOptions', () => {
       };
       const scan = scanAgent(agentDef, ctx);
       expect(scan.found, `${id} detected after install`).toBe(true);
+    }
+  });
+
+  it('catalog commands reference packages that exist (no fabricated names)', () => {
+    const platforms = ['darwin', 'linux', 'win32'] as const;
+    const ids = [
+      'headroom', 'pxpipe', 'rtk', 'llmlingua', 'tokenshift', 'caveman', 'leanctx',
+      'supercompress', 'selective-ctx', 'squeez', 'omni-route', 'graphify', 'ponytail',
+    ];
+    const badNpm = /npm install -g (pxpipe|tokenshift-cli|@pointfive\/tokenshift|supercompress|omni-route|lean-ctx|@leanctx\/cli)(\s|\||$)/;
+    for (const platform of platforms) {
+      for (const id of ids) {
+        for (const opt of getProxyInstallOptions(id, platform)) {
+          expect(opt.command, `${id}@${platform}:${opt.id}`).not.toMatch(badNpm);
+          expect(opt.command, `${id}@${platform}:${opt.id}`).not.toContain('tokenshift/install.sh');
+          expect(opt.command, `${id}@${platform}:${opt.id}`).not.toContain('@pxpipe/proxy');
+        }
+      }
+    }
+  });
+
+  it('every compressor has at least one option on every platform (single is OK when only one source exists)', () => {
+    const platforms = ['darwin', 'linux', 'win32'] as const;
+    const ids = [
+      'headroom', 'pxpipe', 'rtk', 'llmlingua', 'tokenshift', 'caveman', 'leanctx',
+      'supercompress', 'selective-ctx', 'squeez', 'omni-route', 'graphify', 'ponytail',
+    ];
+    for (const platform of platforms) {
+      for (const id of ids) {
+        const opts = getProxyInstallOptions(id, platform);
+        expect(opts.length, `${id}@${platform}`).toBeGreaterThan(0);
+        const idset = new Set(opts.map((o) => o.id));
+        expect(idset.size, `${id}@${platform} distinct`).toBe(opts.length);
+      }
     }
   });
 
