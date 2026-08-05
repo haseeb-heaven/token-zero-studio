@@ -214,9 +214,9 @@ describe('Install commands per platform', () => {
     expect(cmd).toContain('brew install rtk-ai/tap/rtk');
   });
 
-  it('rtk install on win32 uses powershell', () => {
+  it('rtk install on win32 falls back to cargo from git (no verified install.ps1)', () => {
     const cmd = pickPreferredInstallCommand('rtk', 'win32');
-    expect(cmd).toContain('powershell');
+    expect(cmd).toContain('cargo install --git https://github.com/rtk-ai/rtk');
   });
 
   it('rtk install on linux uses curl pipe sh', () => {
@@ -235,9 +235,9 @@ describe('Install commands per platform', () => {
     expect(cmd).toContain('powershell');
   });
 
-  it('tokenshift install on darwin uses curl', () => {
+  it('tokenshift install on darwin opens docs (no verified package exists)', () => {
     const cmd = pickPreferredInstallCommand('tokenshift', 'darwin');
-    expect(cmd).toContain('curl');
+    expect(cmd).toContain('pointfive.co/tokenshift');
   });
 });
 
