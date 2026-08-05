@@ -39,6 +39,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   E404); the catalog now installs `grok-cli`, which ships the `grok` binary.
 - **Dead workflow header buttons**: ✏️ Rename / 🔄 Restart / ✕ Close are now wired to the
   same actions as the right-click context menu.
+- **Proxy stop reliability**: `ProxyManager.stop()` now signals the full process group
+  (detached spawn) and escalates to `SIGKILL`, so the selected compressor's port is
+  actually released instead of orphaning the process.
+- **Real launch integration tests** (`tests/real-launch.test.ts`): spawns every installed
+  compressor and every installed agent at its EXACT default port through the real
+  spawn/fetch machinery and asserts TCP listen + port release on stop (compressors/agents
+  not installed on the current machine are skipped).
 - **Dashboard iframe CSP**: `frame-src` added so the embedded proxy dashboard loads.
 - **Conductor tab removed** — Agents is the default landing view.
 - Removed 129 lines of dead `_openSettings` modal code (superseded by the Settings tab).

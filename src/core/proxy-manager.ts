@@ -185,15 +185,44 @@ export class ProxyManager {
     }
     entry.runtime.state = 'stopping';
     this.emit(launchId, entry);
-    try {
-      entry.proc?.kill();
-    } catch {
-      /* already gone */
-    }
+    this.killProcess(entry);
     entry.runtime = { proxyId: entry.runtime.proxyId, state: 'stopped' };
     this.entries.set(launchId, entry);
     this.emit(launchId, entry);
     return { ...entry.runtime };
+  }
+
+  /**
+   * Terminate the proxy process and its children. The proxy is spawned
+   * detached (own process group), so killing only the direct child would
+   * leave grandchildren holding the port. We signal the whole group and
+   * escalate to SIGKILL so the port is actually released.
+   */
+  private killProcess(entry: RunningProxy): void {
+    const proc = entry.proc;
+    if (!proc) return;
+    const pid = proc.pid;
+    const targets = (_signal: string): number[] => {
+      if (pid && this.deps.platform !== 'win32') {
+        // Signal the process group (detached spawn => group leader is pid).
+        return [-pid, pid];
+      }
+      return pid ? [pid] : [];
+    };
+    for (const signal of ['SIGTERM', 'SIGKILL']) {
+      for (const target of targets(signal)) {
+        try {
+          process.kill(target, signal);
+        } catch {
+          /* process already exited */
+        }
+      }
+    }
+    try {
+      proc.kill('SIGKILL');
+    } catch {
+      /* already gone */
+    }
   }
 
   stopAll(): void {
