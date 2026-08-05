@@ -12,14 +12,20 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "coverage": "vitest run --coverage",
-    "start": "electron .",
-    "dev": "node scripts/build.mjs && electron ."
+    "start": "env -u ELECTRON_RUN_AS_NODE electron .",
+    "dev": "node scripts/build.mjs && env -u ELECTRON_RUN_AS_NODE electron ."
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "electron": "^33.0.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "electron": "^33.4.11",
     "esbuild": "^0.24.0",
+    "jsdom": "^30.0.1",
     "typescript": "^5.6.0",
     "vitest": "^2.1.0"
+  },
+  "dependencies": {
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0"
   }
 }

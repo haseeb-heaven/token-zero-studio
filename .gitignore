@@ -4,3 +4,5 @@ coverage/
 *.log
 smoke.png
 .headroom/
+.npm-cache/
+.aider.chat.history.md

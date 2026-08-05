@@ -56,4 +56,14 @@ copyFileSync(join(root, 'src/renderer/index.html'), out('renderer/index.html'));
 copyFileSync(join(root, 'src/renderer/styles.css'), out('renderer/styles.css'));
 cpSync(join(root, 'assets'), out('assets'), { recursive: true });
 
+// xterm.css for the Workflow embedded terminal
+try {
+  copyFileSync(
+    join(root, 'node_modules/@xterm/xterm/css/xterm.css'),
+    out('renderer/xterm.css'),
+  );
+} catch (err) {
+  console.warn('Could not copy xterm.css:', err);
+}
+
 console.log('Build complete -> dist/');
