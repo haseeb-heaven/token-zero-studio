@@ -3,6 +3,8 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  deriveUninstallCommand,
+  deriveUpdateCommand,
   formatInstallOutcome,
   getProxyInstallOptions,
   pickPreferredInstallCommand,
@@ -192,6 +194,29 @@ describe('getProxyInstallOptions', () => {
     expect(out.message).toContain('/Users/test/.local/bin');
     expect(out.message).toContain('/opt/homebrew/bin');
     expect(out.message).toContain('not found');
+  });
+
+  it('deriveUninstallCommand maps npm/uv/pip/pipx/brew/cargo install options', () => {
+    expect(deriveUninstallCommand({ id: 'npm', label: 'npm', command: 'npm install -g pxpipe-proxy' })).toBe('npm uninstall -g pxpipe-proxy');
+    expect(deriveUninstallCommand({ id: 'uv', label: 'uv', command: 'uv tool install squeez' })).toBe('uv tool uninstall squeez');
+    expect(deriveUninstallCommand({ id: 'pip', label: 'pip', command: 'pip3 install llmlingua' })).toContain('llmlingua');
+    expect(deriveUninstallCommand({ id: 'pipx', label: 'pipx', command: 'pipx install supercompress' })).toBe('pipx uninstall supercompress');
+    expect(deriveUninstallCommand({ id: 'brew', label: 'brew', command: 'brew install rtk-ai/tap/rtk' })).toBe('brew uninstall rtk-ai/tap/rtk');
+    expect(deriveUninstallCommand({ id: 'cargo', label: 'cargo', command: 'cargo install --git https://github.com/rtk-ai/rtk --branch master rtk' })).toBe('cargo uninstall rtk');
+  });
+
+  it('deriveUninstallCommand returns empty for ephemeral/docs options', () => {
+    expect(deriveUninstallCommand({ id: 'npx', label: 'npx', command: 'npx --yes pxpipe-proxy --help', ephemeral: true })).toBe('');
+    expect(deriveUninstallCommand({ id: 'docs', label: 'docs', command: 'open https://example.com' })).toBe('');
+  });
+
+  it('deriveUpdateCommand maps durable install options', () => {
+    expect(deriveUpdateCommand({ id: 'npm', label: 'npm', command: 'npm install -g pxpipe-proxy' })).toBe('npm update -g pxpipe-proxy');
+    expect(deriveUpdateCommand({ id: 'uv', label: 'uv', command: 'uv tool install squeez' })).toBe('uv tool upgrade squeez');
+    expect(deriveUpdateCommand({ id: 'pipx', label: 'pipx', command: 'pipx install supercompress' })).toBe('pipx upgrade supercompress');
+    expect(deriveUpdateCommand({ id: 'brew', label: 'brew', command: 'brew install rtk-ai/tap/rtk' })).toBe('brew upgrade rtk-ai/tap/rtk');
+    expect(deriveUpdateCommand({ id: 'cargo', label: 'cargo', command: 'cargo install --git https://github.com/rtk-ai/rtk --branch master rtk' })).toBe('cargo install --force rtk');
+    expect(deriveUpdateCommand({ id: 'npx', label: 'npx', command: 'npx --yes pxpipe-proxy --help', ephemeral: true })).toBe('');
   });
 
   it('formatInstallOutcome success and failure branches', () => {

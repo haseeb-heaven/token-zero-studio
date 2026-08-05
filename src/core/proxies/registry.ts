@@ -49,13 +49,13 @@ export const PROXIES: ProxyDefinition[] = [
     name: 'PxPipe',
     description: 'Renders token-dense context as PNG image blocks for multimodal models.',
     mode: 'server',
-    executables: ['pxpipe-proxy'],
+    executables: ['pxpipe-proxy', 'pxpipe'],
     wellKnownPaths: {
-      win32: ['%LOCALAPPDATA%\\npx\\pxpipe-proxy.cmd'],
-      darwin: ['/usr/local/bin/pxpipe-proxy', '/opt/homebrew/bin/pxpipe-proxy'],
-      linux: ['/usr/local/bin/pxpipe-proxy', '~/.local/bin/pxpipe-proxy'],
+      win32: ['%LOCALAPPDATA%\\npx\\pxpipe-proxy.cmd', '~\\AppData\\Roaming\\npm\\pxpipe-proxy.cmd', '~\\AppData\\Roaming\\npm\\pxpipe.cmd'],
+      darwin: ['/usr/local/bin/pxpipe-proxy', '/opt/homebrew/bin/pxpipe-proxy', '~/.local/bin/pxpipe', '~/.local/bin/pxpipe-proxy'],
+      linux: ['/usr/local/bin/pxpipe-proxy', '~/.local/bin/pxpipe', '~/.local/bin/pxpipe-proxy'],
     },
-    detectCommand: 'pxpipe-proxy --version',
+    detectCommand: 'pxpipe-proxy --version || pxpipe --version',
     defaultPort: 47821,
     defaultFlags: {},
     buildStartArgs: (port, flags) => {

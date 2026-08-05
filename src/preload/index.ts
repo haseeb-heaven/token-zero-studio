@@ -33,6 +33,8 @@ export interface HeadroomApi {
   detectProxy(proxyId?: string, explicitPath?: string): Promise<ScanResult>;
   installProxy(proxyId: string, optionId?: string): Promise<{ ok: boolean; message: string; paths?: string[]; options?: Array<{ id: string; label: string; command: string; note?: string }> }>;
   installProxyOptions(proxyId: string): Promise<Array<{ id: string; label: string; command: string; note?: string }>>;
+  uninstallProxy(proxyId: string, optionId?: string): Promise<{ ok: boolean; message: string }>;
+  updateProxy(proxyId: string, optionId?: string): Promise<{ ok: boolean; message: string }>;
   installAgent(agentId: string, optionId?: string): Promise<{ ok: boolean; message: string; paths?: string[]; options?: Array<{ id: string; label: string; command: string; note?: string }> }>;
   installAgentOptions(agentId: string): Promise<Array<{ id: string; label: string; command: string; note?: string }>>;
   getConfig(): Promise<AppConfig>;
@@ -79,6 +81,8 @@ const api: HeadroomApi = {
   detectProxy: (proxyId, explicitPath) => ipcRenderer.invoke(IPC.ProxyDetect, proxyId, explicitPath),
   installProxy: (proxyId, optionId) => ipcRenderer.invoke(IPC.InstallProxy, proxyId, optionId),
   installProxyOptions: (proxyId) => ipcRenderer.invoke(IPC.InstallProxyOptions, proxyId),
+  uninstallProxy: (proxyId, optionId) => ipcRenderer.invoke(IPC.UninstallProxy, proxyId, optionId),
+  updateProxy: (proxyId, optionId) => ipcRenderer.invoke(IPC.UpdateProxy, proxyId, optionId),
   installAgent: (agentId, optionId) => ipcRenderer.invoke(IPC.InstallAgent, agentId, optionId),
   installAgentOptions: (agentId) => ipcRenderer.invoke(IPC.InstallAgentOptions, agentId),
   getConfig: () => ipcRenderer.invoke(IPC.ConfigGet),

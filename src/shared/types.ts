@@ -272,6 +272,8 @@ export const IPC = {
   ProxyDetect: 'proxy:detect',
   InstallProxy: 'proxy:install',
   InstallProxyOptions: 'proxy:install-options',
+  UninstallProxy: 'proxy:uninstall',
+  UpdateProxy: 'proxy:update',
   InstallAgent: 'agent:install',
   InstallAgentOptions: 'agent:install-options',
   ConfigGet: 'config:get',

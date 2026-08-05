@@ -25,7 +25,7 @@ import { ProcessManager, SpawnedProcess, buildLaunchPlan, resolveAgentBinary } f
 import { Logger } from '../core/logger';
 import { currentPlatformContext, mergePathWithUserBins, splitPathEnv } from '../core/platform';
 import { ProxyManager } from '../core/proxy-manager';
-import { formatInstallOutcome, getProxyInstallOptions, resolveInstallShell } from '../core/proxy-install';
+import { deriveUninstallCommand, deriveUpdateCommand, formatInstallOutcome, getProxyInstallOptions, resolveInstallShell } from '../core/proxy-install';
 import { getAgentInstallOptions } from '../core/agent-install';
 import { PROXIES, getProxy } from '../core/proxies/registry';
 import type { ProxyDefinition } from '../core/proxies/types';
@@ -492,6 +492,70 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.InstallProxyOptions, (_e, proxyId: string) => {
     return getProxyInstallOptions(proxyId, ctx.platform);
   });
+
+  /** Shared runner for uninstall/update: derive the command from the chosen install option. */
+  const runProxyManage = async (
+    proxyId: string,
+    optionId: string | undefined,
+    kind: 'uninstall' | 'update',
+  ): Promise<{ ok: boolean; message: string }> => {
+    const proxyDef = getProxy(proxyId);
+    const options = getProxyInstallOptions(proxyId, ctx.platform);
+    const chosen = (optionId && options.find((o) => o.id === optionId)) || options[0];
+    const cmd =
+      kind === 'uninstall'
+        ? deriveUninstallCommand(chosen)
+        : deriveUpdateCommand(chosen);
+    if (!cmd) {
+      return {
+        ok: false,
+        message: kind === 'uninstall'
+          ? `No automatic uninstall for ${proxyDef.name} via "${chosen.label}" (${chosen.command}). Remove it manually or pick the durable install option.`
+          : `No automatic update for ${proxyDef.name} via "${chosen.label}". Reinstall with the durable option instead.`,
+      };
+    }
+    logger.info('proxy', `${kind === 'uninstall' ? 'Uninstalling' : 'Updating'} ${proxyDef.name} [${chosen.id}]: ${cmd}`);
+    const baseEnv = { ...process.env } as Record<string, string>;
+    const home = ctx.homeDir || process.env.HOME || process.env.USERPROFILE || '';
+    baseEnv.PATH = mergePathWithUserBins(baseEnv.PATH ?? baseEnv.Path ?? '', ctx.platform, home);
+    return new Promise((resolve) => {
+      const { shell, flag } = resolveInstallShell(ctx.platform);
+      const child = nodeSpawn(shell, [flag, cmd], { stdio: ['pipe', 'pipe', 'pipe'], env: baseEnv });
+      let lastErr: string | undefined;
+      child.stdout?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString().trim();
+        if (text) logger.info('proxy', `[${proxyDef.name} ${kind}] ${text}`);
+      });
+      child.stderr?.on('data', (chunk: Buffer) => {
+        const text = chunk.toString().trim();
+        if (text) logger.warn('proxy', `[${proxyDef.name} ${kind}] ${text}`);
+      });
+      child.on('close', (code) => {
+        if (code === 0) {
+          process.env.PATH = baseEnv.PATH;
+          logger.info('proxy', `${proxyDef.name} ${kind} succeeded (exit 0)`);
+          resolve({ ok: true, message: `${kind === 'uninstall' ? 'Uninstalled' : 'Updated'} ${proxyDef.name} (exit 0).` });
+        } else {
+          resolve({
+            ok: false,
+            message: `${kind === 'uninstall' ? 'Uninstall' : 'Update'} of ${proxyDef.name} failed (exit ${code ?? '?'})${lastErr ? `: ${lastErr}` : ''}. Check logs.`,
+          });
+        }
+      });
+      child.on('error', (err) => {
+        lastErr = String(err);
+        resolve({ ok: false, message: `${kind === 'uninstall' ? 'Uninstall' : 'Update'} error: ${String(err)}` });
+      });
+    });
+  };
+
+  ipcMain.handle(IPC.UninstallProxy, (_e, proxyId: string, optionId?: string) =>
+    runProxyManage(proxyId, optionId, 'uninstall'),
+  );
+
+  ipcMain.handle(IPC.UpdateProxy, (_e, proxyId: string, optionId?: string) =>
+    runProxyManage(proxyId, optionId, 'update'),
+  );
 
   ipcMain.handle(IPC.InstallAgentOptions, (_e, agentId: string) => {
     return getAgentInstallOptions(agentId, ctx.platform);

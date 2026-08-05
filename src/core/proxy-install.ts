@@ -270,6 +270,55 @@ export interface InstallOutcomeInput {
   error?: string;
 }
 
+/** Extract the package/project name from an install command (best effort). */
+function packageNameFrom(command: string, fallbackId: string): string {
+  // cargo install --git <url> [--branch x] <name> — the trailing bare token is the name.
+  if (/cargo install/.test(command)) {
+    const toks = command.split(/\s+/).filter((t) => t && !t.startsWith('--') && !t.startsWith('http'));
+    const name = toks[toks.length - 1];
+    if (name && name !== 'install') return name;
+  }
+  const m = command.match(/install(?:-g| -g)?\s+([^\s|]+)/);
+  if (m) return m[1].replace(/^["']|["']$/g, '');
+  const m2 = command.match(/pipx install\s+([^\s|]+)/);
+  if (m2) return m2[1];
+  const m3 = command.match(/uv tool install[^\s]*\s+([^\s|]+)/);
+  if (m3) return m3[1];
+  const m4 = command.match(/brew install\s+([^\s|]+)/);
+  if (m4) return m4[1];
+  return fallbackId;
+}
+
+/**
+ * Derive the uninstall command for an install option (npm/uv/pip/pipx/brew/
+ * cargo). Returns '' when the source is ephemeral (npx) or not uninstallable
+ * (docs/manual), in which case the UI should hide/disable Remove.
+ */
+export function deriveUninstallCommand(opt: ProxyInstallOption): string {
+  const id = opt.id;
+  const pkg = packageNameFrom(opt.command, id);
+  if (id === 'npm') return `npm uninstall -g ${pkg}`;
+  if (id === 'uv') return `uv tool uninstall ${pkg}`;
+  if (id === 'pip') return `pip3 uninstall -y ${pkg} || python3 -m pip uninstall -y ${pkg}`;
+  if (id === 'pipx') return `pipx uninstall ${pkg}`;
+  if (id === 'brew') return `brew uninstall ${pkg}`;
+  if (id === 'cargo') return `cargo uninstall ${pkg}`;
+  return '';
+}
+
+/** Derive the update command for an install option. Returns '' when not applicable. */
+export function deriveUpdateCommand(opt: ProxyInstallOption): string {
+  const id = opt.id;
+  const pkg = packageNameFrom(opt.command, id);
+  if (id === 'npm') return `npm update -g ${pkg}`;
+  if (id === 'uv') return `uv tool upgrade ${pkg}`;
+  if (id === 'pip') return `pip3 install --upgrade ${pkg} || python3 -m pip install --upgrade ${pkg}`;
+  if (id === 'pipx') return `pipx upgrade ${pkg}`;
+  if (id === 'brew') return `brew upgrade ${pkg}`;
+  if (id === 'cargo') return `cargo install --force ${pkg}`;
+  return '';
+}
+
 /**
  * Human-readable install result. When the command exited 0 but the binary was
  * not detected, lists the dirs that were probed so the user knows where to look.

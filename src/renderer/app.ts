@@ -347,17 +347,16 @@ function renderDetail(): void {
   if (activeTab === 'dashboard') renderDashboard();
 }
 
-let activeTab: 'agents' | 'compressors' | 'workflow' | 'settings' | 'dashboard' | 'conductor' = 'conductor';
+let activeTab: 'agents' | 'compressors' | 'workflow' | 'settings' | 'dashboard' = 'agents';
 
-function switchTab(tab: 'agents' | 'compressors' | 'workflow' | 'settings' | 'dashboard' | 'conductor'): void {
+function switchTab(tab: 'agents' | 'compressors' | 'workflow' | 'settings' | 'dashboard'): void {
   activeTab = tab;
-  const tabs = ['tab-btn-conductor', 'tab-btn-agents', 'tab-btn-compressors', 'tab-btn-workflow', 'tab-btn-settings', 'tab-btn-dashboard'];
+  const tabs = ['tab-btn-agents', 'tab-btn-compressors', 'tab-btn-workflow', 'tab-btn-settings', 'tab-btn-dashboard'];
   for (const id of tabs) {
     const btn = document.getElementById(id);
     if (btn) btn.classList.remove('active');
   }
   const activeMap: Record<string, string> = {
-    conductor: 'tab-btn-conductor',
     agents: 'tab-btn-agents',
     compressors: 'tab-btn-compressors',
     workflow: 'tab-btn-workflow',
@@ -367,16 +366,13 @@ function switchTab(tab: 'agents' | 'compressors' | 'workflow' | 'settings' | 'da
   const activeBtn = document.getElementById(activeMap[tab]);
   if (activeBtn) activeBtn.classList.add('active');
 
-  const views = ['conductor-view', 'sidebar', 'detail', 'compressors-view', 'workflow-view', 'settings-view', 'dashboard-view'];
+  const views = ['sidebar', 'detail', 'compressors-view', 'workflow-view', 'settings-view', 'dashboard-view'];
   for (const id of views) {
     const v = document.getElementById(id);
     if (v) v.classList.add('hidden');
   }
 
-  if (tab === 'conductor') {
-    el('conductor-view').classList.remove('hidden');
-    renderConductor();
-  } else if (tab === 'agents') {
+  if (tab === 'agents') {
     el('sidebar').classList.remove('hidden');
     el('detail').classList.remove('hidden');
   } else if (tab === 'compressors') {
@@ -570,6 +566,49 @@ function selectCompressor(id: string): void {
     btn.disabled = false;
     btn.textContent = 'Install via CLI';
   };
+  const btnUpdate = document.getElementById('btn-update-compressor') as HTMLButtonElement | null;
+  const btnUninstall = document.getElementById('btn-uninstall-compressor') as HTMLButtonElement | null;
+  if (btnUpdate) {
+    btnUpdate.onclick = async () => {
+      btnUpdate.disabled = true;
+      btnUpdate.textContent = 'Updating...';
+      const optionId = (document.getElementById('compressor-install-option') as HTMLSelectElement | null)?.value;
+      const res = await api.updateProxy(proxy.id, optionId || undefined);
+      toast(res.message, res.ok ? 'ok' : 'err');
+      btnUpdate.disabled = false;
+      btnUpdate.textContent = 'Update';
+      if (res.ok) {
+        const detected = await api.detectProxy(proxy.id);
+        if (detected.found && pathInput) {
+          pathInput.value = detected.paths[0];
+          el('compressor-detect-status').innerHTML = '<span style="color:var(--ok)">Updated — found at ' + detected.paths[0] + '</span>';
+        }
+      }
+    };
+  }
+  if (btnUninstall) {
+    btnUninstall.onclick = async () => {
+      btnUninstall.disabled = true;
+      btnUninstall.textContent = 'Removing...';
+      const optionId = (document.getElementById('compressor-install-option') as HTMLSelectElement | null)?.value;
+      const res = await api.uninstallProxy(proxy.id, optionId || undefined);
+      toast(res.message, res.ok ? 'ok' : 'err');
+      btnUninstall.disabled = false;
+      btnUninstall.textContent = 'Remove';
+      if (res.ok) {
+        // Clear the persisted path so a stale binary reference is not reused.
+        if (proxy.id === 'headroom') {
+          if (config) config.headroomPath = '';
+        } else {
+          const slot = config?.proxies.find((p) => p.proxyId === proxy.id);
+          if (slot) slot.profiles[0].proxyPath = '';
+        }
+        if (pathInput) pathInput.value = '';
+        el('compressor-detect-status').innerHTML = '<span style="color:var(--warn)">Removed — click Detect to confirm</span>';
+        await saveConfig(true).catch(() => { /* non-fatal */ });
+      }
+    };
+  }
   el('btn-save-compressor').onclick = async () => {
     const binary = (document.getElementById('compressor-binary-path') as HTMLInputElement)?.value?.trim() ?? '';
     const status = el('compressor-save-status');
@@ -1044,296 +1083,11 @@ function stripAnsi(text: string): string {
 function workflowStatusLine(session: WorkflowSession, text: string): void {
   session.output.push(text);
   if (activeWorkflowSession !== session.id) return;
-  if (activeTab === 'conductor' && conductorXterm) conductorXterm.writeln(text);
-  else if (workflowXterm) workflowXterm.writeln(text);
-}
-
-/* ============================== Conductor ============================== */
-/**
- * The GUI Conductor AI App — the app's landing tab. Pick an agent + token
- * compressor, optionally give it a task, and the agent runs in an embedded
- * terminal right in the GUI, exactly like a CLI agent in the Workflow view.
- * Sessions are shared with the Workflow tab (same launch pool).
- */
-
-let conductorXterm: Terminal | null = null;
-let conductorFit: FitAddon | null = null;
-let conductorXtermLaunchId: string | null = null;
-let conductorDataUnsub: (() => void) | null = null;
-
-function renderConductor(): void {
-  renderConductorLaunch();
-  renderConductorSessions();
-  const session = activeWorkflowSession
-    ? workflowSessions.find((s) => s.id === activeWorkflowSession)
-    : undefined;
-  if (session) showConductorTerminal(session);
-  else showConductorEmpty();
-}
-
-function showConductorEmpty(): void {
-  el('conductor-empty').classList.remove('hidden');
-  el('conductor-terminal').classList.add('hidden');
-}
-
-function ensureConductorXterm(): Terminal {
-  const host = document.getElementById('conductor-xterm');
-  if (!host) throw new Error('conductor-xterm host missing');
-  if (conductorXterm) return conductorXterm;
-
-  const term = new Terminal({
-    cursorBlink: true,
-    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-    fontSize: 13,
-    lineHeight: 1.25,
-    theme: {
-      background: '#0a0e14',
-      foreground: '#e0e6f0',
-      cursor: '#22d3ee',
-      selectionBackground: '#264f78',
-    },
-    allowProposedApi: true,
-    scrollback: 5000,
-  });
-  const fit = new FitAddon();
-  term.loadAddon(fit);
-  term.open(host);
-  fit.fit();
-  conductorXterm = term;
-  conductorFit = fit;
-
-  // Keystrokes go straight to the agent PTY — same contract as the Workflow xterm.
-  term.onData((data) => {
-    const sess = workflowSessions.find((s) => s.id === activeWorkflowSession);
-    if (!sess?.launchId || !isSessionLive(sess.state)) return;
-    void api.writeStdin(sess.launchId, data, true);
-  });
-
-  window.addEventListener('resize', () => {
-    try { conductorFit?.fit(); } catch { /* ignore */ }
-  });
-
-  if (!conductorDataUnsub) {
-    conductorDataUnsub = api.onTerminalData(({ launchId, data }) => {
-      if (activeTab !== 'conductor') return;
-      const sess = workflowSessions.find((s) => s.id === activeWorkflowSession);
-      if (!sess || sess.launchId !== launchId) return;
-      if (!conductorXterm) return;
-      conductorXterm.write(data);
-      try { conductorXterm.focus(); } catch { /* ignore */ }
-    });
-  }
-
-  return term;
-}
-
-function showConductorTerminal(session: WorkflowSession): void {
-  el('conductor-empty').classList.add('hidden');
-  el('conductor-terminal').classList.remove('hidden');
-  el('conductor-session-title').textContent =
-    session.agentName + ' · ' + session.compressorId + (session.state === 'running' ? '' : ' · ' + session.state);
-
-  const term = ensureConductorXterm();
-  if (conductorXtermLaunchId !== session.launchId) {
-    term.reset();
-    conductorXtermLaunchId = session.launchId;
-    if (session.output.length > 0) {
-      for (const line of session.output) term.writeln(stripAnsi(line));
-    }
-  }
-  try { conductorFit?.fit(); } catch { /* ignore */ }
-  setTimeout(() => term.focus(), 50);
-}
-
-/** Populate the Conductor launch card once (preserves user selection). */
-function renderConductorLaunch(): void {
-  const agentSelect = document.getElementById('conductor-agent-select') as HTMLSelectElement | null;
-  if (!agentSelect) return;
-  const sub = document.getElementById('conductor-sub');
-  if (sub) {
-    const found = agents.filter((a) => scans.get(a.id)?.found).length;
-    sub.textContent = `${found}/${agents.length} agents detected`;
-  }
-  if (agentSelect.options.length === 0) {
-    const firstDetected = agents.find((a) => scans.get(a.id)?.found);
-    for (const agent of agents) {
-      const scan = scans.get(agent.id);
-      const status = scan ? (scan.found ? '✓ detected' : 'not found') : '…';
-      const opt = document.createElement('option');
-      opt.value = agent.id;
-      opt.textContent = `${agent.name} (${interfaceLabel(agent)} · ${status})`;
-      agentSelect.appendChild(opt);
-    }
-    if (firstDetected) agentSelect.value = firstDetected.id;
-    agentSelect.onchange = () => {
-      updateConductorAgentHint();
-      const workdirInput = document.getElementById('conductor-workdir') as HTMLInputElement | null;
-      if (workdirInput) {
-        workdirInput.dataset.touched = '';
-        const ac = config?.agents.find((a) => a.agentId === agentSelect.value);
-        const profile = ac?.profiles.find((p) => p.name === ac.activeProfile) ?? ac?.profiles[0];
-        if (profile) workdirInput.value = profile.workingDirectory;
-      }
-    };
-  }
-  const compSelect = document.getElementById('conductor-compressor-select') as HTMLSelectElement | null;
-  if (compSelect && compSelect.options.length === 0) {
-    for (const p of PROXIES) {
-      const opt = document.createElement('option');
-      opt.value = p.id;
-      opt.textContent = p.name;
-      compSelect.appendChild(opt);
-    }
-    if (config?.defaultCompressor) compSelect.value = config.defaultCompressor;
-  }
-  updateConductorAgentHint();
-}
-
-function updateConductorAgentHint(): void {
-  const agentSelect = document.getElementById('conductor-agent-select') as HTMLSelectElement | null;
-  const hint = document.getElementById('conductor-agent-hint');
-  const compHint = document.getElementById('conductor-compressor-hint');
-  if (compHint && config) {
-    const comp = PROXIES.find((p) => p.id === (document.getElementById('conductor-compressor-select') as HTMLSelectElement | null)?.value);
-    compHint.textContent = comp?.description ?? '';
-  }
-  if (!agentSelect || !hint) return;
-  const agent = agents.find((a) => a.id === agentSelect.value);
-  if (!agent) return;
-  const scan = scans.get(agent.id);
-  if (scan?.found) {
-    hint.textContent = `Detected at ${scan.paths[0]}`;
-  } else if (scan) {
-    hint.textContent = `${agent.name} was not found — configure or install it in the Agents tab first.`;
-  } else {
-    hint.textContent = 'Detection pending… run Scan System from the top bar.';
-  }
-}
-
-function renderConductorSessions(): void {
-  const strip = el('conductor-sessions');
-  strip.innerHTML = '';
-  for (const session of workflowSessions) {
-    const chip = document.createElement('div');
-    chip.className = 'conductor-session-chip' + (session.id === activeWorkflowSession ? ' active' : '');
-    const state = document.createElement('span');
-    state.className = `cd-chip-state ${session.state}`;
-    const name = document.createElement('span');
-    name.textContent = session.agentName + ' · ' + session.compressorId;
-    const close = document.createElement('button');
-    close.className = 'cd-chip-close';
-    close.textContent = '✕';
-    close.title = 'Close session';
-    close.onclick = (e) => {
-      e.stopPropagation();
-      void closeConductorSession(session);
-    };
-    chip.append(state, name, close);
-    chip.onclick = () => {
-      activeWorkflowSession = session.id;
-      renderConductor();
-    };
-    strip.appendChild(chip);
-  }
-}
-
-async function closeConductorSession(session: WorkflowSession): Promise<void> {
-  try { await api.stop(session.launchId); } catch { /* ignore */ }
-  const idx = workflowSessions.indexOf(session);
-  if (idx >= 0) workflowSessions.splice(idx, 1);
-  runtimes.delete(session.agentId);
-  if (activeWorkflowSession === session.id) {
-    activeWorkflowSession = workflowSessions.length > 0 ? workflowSessions[workflowSessions.length - 1].id : null;
-  }
-  renderConductor();
-  toast('Closed: ' + session.agentName);
-}
-
-/** Launch from the Conductor launch card into the embedded conductor terminal. */
-async function conductorLaunch(): Promise<void> {
-  const agentSelect = el<HTMLSelectElement>('conductor-agent-select');
-  const agentId = agentSelect.value;
-  if (!agentId) {
-    toast('Pick an agent first', 'err');
-    return;
-  }
-  const compressorId = el<HTMLSelectElement>('conductor-compressor-select').value || config?.defaultCompressor || 'headroom';
-  const workdir = el<HTMLInputElement>('conductor-workdir').value.trim();
-  const prompt = el<HTMLTextAreaElement>('conductor-prompt').value.trim();
-  const status = el('conductor-status');
-  const launchBtn = el<HTMLButtonElement>('conductor-launch-btn');
-  launchBtn.disabled = true;
-  status.textContent = 'Launching…';
-  try {
-    const ac = config?.agents.find((a) => a.agentId === agentId);
-    const profile = ac?.profiles.find((p) => p.name === ac.activeProfile) ?? ac?.profiles[0];
-    if (profile && workdir) {
-      profile.workingDirectory = workdir;
-      await saveConfig(true);
-    }
-    const session = await addWorkflowSession(agentId, compressorId, 'conductor');
-    if (prompt && session) void sendPromptToSession(session, prompt);
-    status.textContent = '';
-  } catch (err) {
-    status.textContent = '';
-    toast('Launch failed: ' + String(err), 'err');
-  } finally {
-    launchBtn.disabled = false;
-  }
-}
-
-/** Best-effort: send the Conductor task prompt once the agent is ready. */
-async function sendPromptToSession(session: WorkflowSession, prompt: string): Promise<void> {
-  const deadline = Date.now() + 12000;
-  while (Date.now() < deadline) {
-    if (isSessionLive(session.state)) break;
-    await new Promise((r) => setTimeout(r, 500));
-  }
-  if (!isSessionLive(session.state)) {
-    workflowStatusLine(session, '[Conductor] Agent did not become ready in time — paste the task manually.');
-    return;
-  }
-  try {
-    await api.writeStdin(session.launchId, prompt + '\n', false);
-    workflowStatusLine(session, '[Conductor] Task sent: ' + prompt.slice(0, 80) + (prompt.length > 80 ? '…' : ''));
-  } catch (err) {
-    workflowStatusLine(session, '[Conductor] Failed to send task: ' + String(err));
-  }
-}
-
-async function stopConductorSession(): Promise<void> {
-  const session = workflowSessions.find((s) => s.id === activeWorkflowSession);
-  if (!session) return;
-  try { await api.stop(session.launchId); } catch { /* ignore */ }
-  session.state = 'stopped';
-  workflowStatusLine(session, '[Stopped]');
-  renderConductor();
-  toast('Stopped: ' + session.agentName);
-}
-
-async function restartConductorSession(): Promise<void> {
-  const session = workflowSessions.find((s) => s.id === activeWorkflowSession);
-  if (!session) return;
-  try { await api.stop(session.launchId); } catch { /* ignore */ }
-  session.output = [];
-  conductorXtermLaunchId = null;
-  workflowStatusLine(session, 'Restarting...');
-  renderConductor();
-  try {
-    const rt = await api.launchEmbedded({ agentId: session.agentId, compressorId: session.compressorId });
-    session.launchId = rt.id ?? session.launchId;
-    session.trackerId = (rt as { trackerId?: string }).trackerId;
-    session.state = rt.state;
-    if (rt.output?.length) session.output = [...rt.output];
-    workflowStatusLine(session, 'Restarted on port ' + rt.port);
-  } catch (err) {
-    workflowStatusLine(session, 'Error: ' + String(err));
-  }
-  renderConductor();
+  if (workflowXterm) workflowXterm.writeln(text);
 }
 
 /** Add a new workflow session from an embedded launch. Returns the session, or null when one was already live. */
-async function addWorkflowSession(agentId: string, compressorId?: string, view: 'workflow' | 'conductor' = 'workflow'): Promise<WorkflowSession | null> {
+async function addWorkflowSession(agentId: string, compressorId?: string): Promise<WorkflowSession | null> {
   // Check if this agent+compressor combo is already running
   const resolvedCompressorId = compressorId || config?.defaultCompressor || 'headroom';
   const existing = workflowSessions.find(
@@ -1343,7 +1097,7 @@ async function addWorkflowSession(agentId: string, compressorId?: string, view: 
     if (existing.state === 'running' || existing.state === 'proxy-up') {
       toast('Session already running for ' + existing.agentName, 'err');
       activeWorkflowSession = existing.id;
-      switchTab(view);
+      switchTab('workflow');
       return null;
     }
     // Session exists but is stopped - remove it and create new
@@ -1370,7 +1124,7 @@ async function addWorkflowSession(agentId: string, compressorId?: string, view: 
     };
     workflowSessions.push(session);
     activeWorkflowSession = session.id;
-    switchTab(view);
+    switchTab('workflow');
     toast('Session started: ' + session.agentName);
     return session;
   } catch (err) {
@@ -2080,41 +1834,12 @@ async function init(): Promise<void> {
   el<HTMLSelectElement>('launch-bar-compressor-select').onchange = onProxyChange;
 
   // tab navigation
-  el('tab-btn-conductor').onclick = () => switchTab('conductor');
   el('tab-btn-agents').onclick = () => switchTab('agents');
   el('tab-btn-compressors').onclick = () => switchTab('compressors');
   el('tab-btn-workflow').onclick = () => switchTab('workflow');
   el('tab-btn-settings').onclick = () => switchTab('settings');
   el('tab-btn-dashboard').onclick = () => switchTab('dashboard');
 
-  // Conductor launch card + session controls
-  const conductorAgentSelect = document.getElementById('conductor-agent-select') as HTMLSelectElement | null;
-  if (conductorAgentSelect) conductorAgentSelect.onchange = () => updateConductorAgentHint();
-  const conductorWorkdir = document.getElementById('conductor-workdir') as HTMLInputElement | null;
-  if (conductorWorkdir) conductorWorkdir.oninput = () => { conductorWorkdir.dataset.touched = ''; };
-  el('conductor-launch-btn').onclick = () => void conductorLaunch();
-  el('conductor-browse-dir').onclick = async () => {
-    const picked = await api.pickDirectory();
-    if (picked) {
-      el<HTMLInputElement>('conductor-workdir').value = picked;
-      el<HTMLInputElement>('conductor-workdir').dataset.touched = '';
-    }
-  };
-  el('conductor-btn-rename').onclick = async () => {
-    const session = workflowSessions.find((s) => s.id === activeWorkflowSession);
-    if (!session) return;
-    const name = await promptModal('Rename session', session.agentName);
-    if (name && name.trim()) {
-      session.agentName = name.trim();
-      renderConductor();
-    }
-  };
-  el('conductor-btn-restart').onclick = () => void restartConductorSession();
-  el('conductor-btn-stop').onclick = () => void stopConductorSession();
-  el('conductor-btn-close').onclick = async () => {
-    const session = workflowSessions.find((s) => s.id === activeWorkflowSession);
-    if (session) await closeConductorSession(session);
-  };
   el('btn-refresh-dash').onclick = () => {
     const iframe = el<HTMLIFrameElement>('dash-iframe');
     if (iframe && iframe.src) iframe.src = iframe.src;
@@ -2209,7 +1934,7 @@ async function init(): Promise<void> {
   if (agents.length > 0 && !selectedId) selectAgent(agents[0].id);
 
   // The GUI Conductor AI App is the landing view; Dashboard stays last.
-  switchTab('conductor');
+  switchTab('agents');
   } catch (err) {
     console.error('Init error:', err);
     toast('Failed to initialize: ' + String(err), 'err');
