@@ -406,11 +406,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       ? [chosen, ...options.filter((o) => o.id !== chosen.id)]
       : options;
     let lastError: string | undefined;
+    let sawExitZero = false;
     for (const opt of queue) {
       logger.info('proxy', `Trying install option "${opt.label}" for ${proxyDef.name}`);
       const result = await runOne(opt.command);
       lastError = result.error;
       if (result.code === 0) {
+        sawExitZero = true;
         // Refresh PATH and re-scan so the UI can locate the binary immediately.
         process.env.PATH = baseEnv.PATH;
         const probedDirs = splitPathEnv(baseEnv.PATH, ctx.platform);
@@ -433,6 +435,25 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
             options,
           };
         }
+        if (opt.ephemeral) {
+          // npx smoke-run: by design it never leaves a persistent binary on
+          // PATH. When the user explicitly picked it, report honestly and stop;
+          // during the automatic fallback walk, skip ahead to a real installer.
+          logger.info('proxy', `Install option "${opt.label}" for ${proxyDef.name} is ephemeral (no persistent binary) — skipping detection`);
+          if (optionId && optionId === opt.id) {
+            const outcome = formatInstallOutcome({
+              ok: true,
+              exitedZero: true,
+              detected: false,
+              probedDirs,
+              label: opt.label,
+              name: proxyDef.name,
+              ephemeral: true,
+            });
+            return { ok: true, message: outcome.message, paths: [], options };
+          }
+          continue;
+        }
         logger.warn('proxy', `Install of ${proxyDef.name} via ${opt.label} exited 0 but binary not yet on PATH`);
         const outcome = formatInstallOutcome({
           ok: true,
@@ -454,12 +475,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
     const outcome = formatInstallOutcome({
       ok: false,
-      exitedZero: false,
+      exitedZero: sawExitZero,
       detected: false,
       probedDirs: splitPathEnv(baseEnv.PATH, ctx.platform),
       label: queue.map((o) => o.label).join(', '),
       name: proxyDef.name,
-      error: lastError,
+      error: sawExitZero ? undefined : lastError,
     });
     return {
       ok: false,
@@ -514,11 +535,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       ? [chosen, ...options.filter((o) => o.id !== chosen.id)]
       : options;
     let lastError: string | undefined;
+    let sawExitZero = false;
     for (const opt of queue) {
       logger.info('app', `Trying install option "${opt.label}" for ${agentDef.name}`);
       const result = await runOne(opt.command);
       lastError = result.error;
       if (result.code === 0) {
+        sawExitZero = true;
         process.env.PATH = baseEnv.PATH;
         const probedDirs = splitPathEnv(baseEnv.PATH, ctx.platform);
         const scan = scanAgent(agentDef, { ...ctx, env: { ...ctx.env, PATH: baseEnv.PATH } });
@@ -537,6 +560,22 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
             paths: scan.paths,
             options,
           };
+        }
+        if (opt.ephemeral) {
+          logger.info('app', `Install option "${opt.label}" for ${agentDef.name} is ephemeral (no persistent binary) — skipping detection`);
+          if (optionId && optionId === opt.id) {
+            const outcome = formatInstallOutcome({
+              ok: true,
+              exitedZero: true,
+              detected: false,
+              probedDirs,
+              label: opt.label,
+              name: agentDef.name,
+              ephemeral: true,
+            });
+            return { ok: true, message: outcome.message, paths: [], options };
+          }
+          continue;
         }
         const outcome = formatInstallOutcome({
           ok: true,
@@ -557,12 +596,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     }
     const outcome = formatInstallOutcome({
       ok: false,
-      exitedZero: false,
+      exitedZero: sawExitZero,
       detected: false,
       probedDirs: splitPathEnv(baseEnv.PATH, ctx.platform),
       label: queue.map((o) => o.label).join(', '),
       name: agentDef.name,
-      error: lastError,
+      error: sawExitZero ? undefined : lastError,
     });
     return {
       ok: false,

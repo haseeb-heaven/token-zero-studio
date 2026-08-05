@@ -18,6 +18,11 @@ export interface ProxyInstallOption {
   command: string;
   /** Optional note (e.g. "recommended", "adds ~/.local/bin"). */
   note?: string;
+  /**
+   * True for smoke-run options (npx) that never leave a persistent binary on
+   * PATH. The installer must not claim "installed" when they exit 0.
+   */
+  ephemeral?: boolean;
 }
 
 type PlatformMap = Partial<Record<PlatformName, ProxyInstallOption[]>> & {
@@ -46,15 +51,15 @@ const CATALOG: Record<string, PlatformMap> = {
   pxpipe: {
     darwin: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
-      { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Smoke-run only — never installs a binary on PATH; use npm -g', ephemeral: true },
     ],
     linux: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
-      { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (no install)', command: 'npx --yes pxpipe-proxy --help', note: 'Smoke-run only — never installs a binary on PATH; use npm -g', ephemeral: true },
     ],
     win32: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g pxpipe-proxy' },
-      { id: 'npx', label: 'npx (no install)', command: 'cmd /c npx --yes pxpipe-proxy --help', note: 'Ephemeral; prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (no install)', command: 'cmd /c npx --yes pxpipe-proxy --help', note: 'Smoke-run only — never installs a binary on PATH; use npm -g', ephemeral: true },
     ],
   },
   rtk: {
@@ -104,11 +109,11 @@ const CATALOG: Record<string, PlatformMap> = {
     darwin: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g caveman || npm install -g @caveman/cli' },
       { id: 'brew', label: 'Homebrew', command: 'brew install caveman || brew tap JuliusBrussee/caveman && brew install caveman' },
-      { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Ephemeral run; prefer npm -g for detection' },
+      { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
     linux: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g caveman || npm install -g @caveman/cli' },
-      { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Ephemeral run; prefer npm -g for detection' },
+      { id: 'npx', label: 'npx from GitHub', command: 'npx -y github:JuliusBrussee/caveman', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
     win32: [
       { id: 'ps1', label: 'PowerShell installer (recommended)', command: 'powershell -NoProfile -Command "irm https://raw.githubusercontent.com/JuliusBrussee/caveman/main/install.ps1 | iex"' },
@@ -218,12 +223,12 @@ const CATALOG: Record<string, PlatformMap> = {
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
       { id: 'brew', label: 'Homebrew', command: 'brew install ponytail || brew install ponytail/tap/ponytail' },
       { id: 'cargo', label: 'Cargo', command: 'cargo install ponytail || cargo install --git https://github.com/ponytail-ai/ponytail ponytail' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
     linux: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
       { id: 'cargo', label: 'Cargo', command: 'cargo install ponytail || cargo install --git https://github.com/ponytail-ai/ponytail ponytail' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y ponytail --version', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
     win32: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g ponytail || npm install -g @ponytail/cli' },
@@ -260,20 +265,30 @@ export interface InstallOutcomeInput {
   probedDirs: string[];
   label: string;
   name: string;
+  /** True when the command was a smoke-run (npx) that never installs a persistent binary. */
+  ephemeral?: boolean;
   error?: string;
 }
 
 /**
  * Human-readable install result. When the command exited 0 but the binary was
  * not detected, lists the dirs that were probed so the user knows where to look.
+ * Ephemeral (npx) runs never leave a binary — they get an explicit explanation
+ * instead of a misleading "installed but not found" report.
  */
 export function formatInstallOutcome(opts: InstallOutcomeInput): { message: string; paths: string[] } {
   if (opts.error) return { message: `Installation error: ${opts.error}`, paths: [] };
   if (!opts.exitedZero) return { message: `Installation failed (non-zero exit). Tried: ${opts.label}`, paths: [] };
   if (opts.detected) return { message: `Successfully installed ${opts.name}.`, paths: [] };
+  if (opts.ephemeral) {
+    return {
+      message: `'${opts.label}' ran successfully, but it does not install a persistent binary — ${opts.name} is not on PATH. Use the durable install option (npm -g) instead.`,
+      paths: [],
+    };
+  }
   const probed = opts.probedDirs.length > 0 ? opts.probedDirs.join(', ') : 'the PATH directories';
   return {
-    message: `Installed ${opts.name}, but the binary was not found in ${probed}. Click Detect or set the path manually.`,
+    message: `Install command exited 0, but ${opts.name} was not found in ${probed}. Click Detect or set the path manually.`,
     paths: [],
   };
 }

@@ -9,6 +9,8 @@ export interface AgentInstallOption {
   label: string;
   command: string;
   note?: string;
+  /** True for smoke-run options (npx) that never leave a persistent binary on PATH. */
+  ephemeral?: boolean;
 }
 
 type PlatformMap = Partial<Record<PlatformName, AgentInstallOption[]>> & {
@@ -29,13 +31,13 @@ const CATALOG: Record<string, PlatformMap> = {
   codex: {
     default: [
       { id: 'npm', label: 'npm global (recommended)', command: 'npm install -g @openai/codex' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y @openai/codex --version', note: 'Does not leave a permanent binary — prefer npm -g' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y @openai/codex --version', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
   },
   cline: {
     default: [
       { id: 'npm', label: 'npm global', command: 'npm install -g cline' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y cline --version', note: 'Prefer npm -g for PATH detection' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y cline --version', note: 'Smoke-run only — never installs a binary on PATH; prefer npm -g', ephemeral: true },
     ],
   },
   aider: {
@@ -58,7 +60,7 @@ const CATALOG: Record<string, PlatformMap> = {
   gemini: {
     default: [
       { id: 'npm', label: 'npm global', command: 'npm install -g @google/gemini-cli' },
-      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y @google/gemini-cli --version' },
+      { id: 'npx', label: 'npx (ephemeral)', command: 'npx -y @google/gemini-cli --version', ephemeral: true },
     ],
   },
   grok: {

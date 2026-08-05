@@ -194,6 +194,16 @@ describe('agent fact table sanity', () => {
     }
   });
 
+  it('npx agent install options are marked ephemeral (never claim a persistent binary)', () => {
+    for (const id of ['codex', 'cline', 'gemini']) {
+      const opts = getAgentInstallOptions(id, 'darwin');
+      const npxOpt = opts.find((o) => o.id === 'npx');
+      expect(npxOpt, `${id} npx option`).toBeTruthy();
+      expect(npxOpt?.ephemeral, `${id} npx is ephemeral`).toBe(true);
+      expect(opts.find((o) => o.id === 'npm')?.ephemeral, `${id} npm -g is durable`).toBeFalsy();
+    }
+  });
+
   it('every agent has well-known paths on every platform (cross-platform sweep)', () => {
     const platforms = ['win32', 'darwin', 'linux'] as const;
     for (const platform of platforms) {

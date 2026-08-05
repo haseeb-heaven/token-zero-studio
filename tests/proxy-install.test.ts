@@ -208,6 +208,38 @@ describe('getProxyInstallOptions', () => {
     expect(cmd).toContain('headroom-ai');
   });
 
+  it('npx (no install) options are marked ephemeral so the installer never claims success', () => {
+    for (const platform of ['darwin', 'linux', 'win32'] as const) {
+      const px = getProxyInstallOptions('pxpipe', platform);
+      const npxOpt = px.find((o) => o.id === 'npx');
+      expect(npxOpt, `pxpipe npx @ ${platform}`).toBeTruthy();
+      expect(npxOpt?.ephemeral, `pxpipe npx is ephemeral @ ${platform}`).toBe(true);
+      expect(px.find((o) => o.id === 'npm')?.ephemeral, 'npm -g is a durable install').toBeFalsy();
+    }
+    for (const id of ['caveman', 'ponytail']) {
+      for (const platform of ['darwin', 'linux'] as const) {
+        const opt = getProxyInstallOptions(id, platform).find((o) => o.id === 'npx');
+        expect(opt?.ephemeral, `${id} npx is ephemeral @ ${platform}`).toBe(true);
+      }
+    }
+  });
+
+  it('formatInstallOutcome explains ephemeral runs instead of claiming success', () => {
+    const out = formatInstallOutcome({
+      ok: true,
+      exitedZero: true,
+      detected: false,
+      probedDirs: ['/usr/bin'],
+      label: 'npx (no install)',
+      name: 'PxPipe',
+      ephemeral: true,
+    });
+    expect(out.message).toContain('npx (no install)');
+    expect(out.message).toContain('does not install a persistent binary');
+    expect(out.message).toContain('npm -g');
+    expect(out.message).not.toContain('Successfully installed');
+  });
+
   it('resolveInstallShell uses cmd on win32 and sh elsewhere', () => {
     expect(resolveInstallShell('win32')).toEqual({ shell: 'cmd.exe', flag: '/c' });
     expect(resolveInstallShell('darwin')).toEqual({ shell: '/bin/sh', flag: '-c' });
