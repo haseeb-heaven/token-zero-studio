@@ -19,7 +19,8 @@
         </div>
       </div>
       <nav class="top-nav-tabs">
-        <button id="tab-btn-agents" class="nav-tab active"><span>🤖</span> Agents</button>
+        <button id="tab-btn-conductor" class="nav-tab"><span>🎼</span> Conductor</button>
+        <button id="tab-btn-agents" class="nav-tab"><span>🤖</span> Agents</button>
         <button id="tab-btn-compressors" class="nav-tab"><span>🧩</span> Compressors</button>
         <button id="tab-btn-workflow" class="nav-tab"><span>🖥️</span> Workflow</button>
         <button id="tab-btn-settings" class="nav-tab"><span>⚙️</span> Settings</button>
@@ -45,6 +46,68 @@
     </header>
 
     <div id="main-row">
+      <!-- ======================= Conductor View ======================= -->
+      <main id="conductor-view" class="view-pane hidden" style="padding:0;display:flex;flex-direction:column;min-height:0;overflow:hidden;">
+        <!-- Launch card -->
+        <section id="conductor-launch" class="card" style="margin:16px 16px 0;flex-shrink:0;">
+          <div class="flex-between align-center" style="margin-bottom:10px;">
+            <h2 style="font-size:16px;font-weight:700;">🎼 Conductor — launch an AI agent</h2>
+            <span id="conductor-sub" class="muted small"></span>
+          </div>
+          <div class="grid-2" style="gap:12px;">
+            <div class="field">
+              <label for="conductor-agent-select">AI Agent</label>
+              <select id="conductor-agent-select"></select>
+              <div class="small muted" id="conductor-agent-hint" style="margin-top:6px;"></div>
+            </div>
+            <div class="field">
+              <label for="conductor-compressor-select">Token Compressor</label>
+              <select id="conductor-compressor-select"></select>
+              <div class="small muted" id="conductor-compressor-hint" style="margin-top:6px;"></div>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label for="conductor-workdir">Working directory</label>
+            <div class="field-row">
+              <input id="conductor-workdir" type="text" placeholder="Current directory" spellcheck="false" />
+              <button id="conductor-browse-dir" class="btn btn-ghost" title="Pick working directory">…</button>
+            </div>
+          </div>
+          <div class="field" style="margin-top:10px;">
+            <label for="conductor-prompt">Task / prompt <span class="muted small">(optional — sent to the agent once it is ready)</span></label>
+            <textarea id="conductor-prompt" rows="2" placeholder="e.g. Refactor src/core/launcher.ts and add unit tests" spellcheck="false"></textarea>
+          </div>
+          <div class="field-row" style="margin-top:12px;">
+            <button id="conductor-launch-btn" class="btn btn-primary">▶ Launch in Conductor</button>
+            <span id="conductor-status" class="muted small"></span>
+          </div>
+        </section>
+
+        <!-- Session strip -->
+        <div id="conductor-sessions" class="conductor-sessions" style="margin:12px 16px 0;flex-shrink:0;"></div>
+
+        <!-- Embedded terminal -->
+        <div id="conductor-terminal-wrap" class="flex-1" style="margin:12px 16px 16px;min-height:280px;display:flex;flex-direction:column;">
+          <div id="conductor-empty" class="workflow-empty" style="border:1px dashed var(--border-strong);border-radius:10px;">
+            <div style="font-size:48px;margin-bottom:12px;">🎼</div>
+            <h3>Conductor ready</h3>
+            <p class="muted" style="max-width:480px;text-align:center;">Pick an agent and compressor above, then hit <strong>Launch in Conductor</strong>. The agent runs in an embedded terminal right here — just like a CLI inside the GUI app workflow.</p>
+          </div>
+          <div id="conductor-terminal" class="conductor-terminal hidden">
+            <div id="conductor-terminal-header" class="workflow-terminal-header">
+              <span id="conductor-session-title"></span>
+              <div class="workflow-terminal-actions">
+                <button id="conductor-btn-rename" class="btn btn-ghost small-btn" title="Rename session">✏️</button>
+                <button id="conductor-btn-restart" class="btn btn-ghost small-btn" title="Restart session">🔄</button>
+                <button id="conductor-btn-stop" class="btn btn-ghost small-btn" title="Stop session">⏹</button>
+                <button id="conductor-btn-close" class="btn btn-danger-ghost small-btn" title="Close session">✕</button>
+              </div>
+            </div>
+            <div id="conductor-xterm" class="workflow-xterm"></div>
+          </div>
+        </div>
+      </main>
+
       <!-- ======================= Sidebar ======================= -->
       <aside id="sidebar">
         <div class="sidebar-search">

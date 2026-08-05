@@ -619,6 +619,90 @@ describe('Workflow view', () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* Conductor view (GUI Conductor AI App)                               */
+/* ------------------------------------------------------------------ */
+
+describe('Conductor view', () => {
+  beforeEach(() => {
+    document.body.innerHTML = `
+      <div id="tab-btn-conductor" class="nav-tab"><span>Conductor</span></div>
+      <div id="tab-btn-agents" class="nav-tab"><span>Agents</span></div>
+      <div id="tab-btn-dashboard" class="nav-tab"><span>Dashboard</span></div>
+      <main id="conductor-view" class="view-pane hidden" style="display:flex;flex-direction:column;">
+        <section id="conductor-launch">
+          <select id="conductor-agent-select"></select>
+          <select id="conductor-compressor-select"></select>
+          <input id="conductor-workdir" type="text" />
+          <textarea id="conductor-prompt"></textarea>
+          <button id="conductor-launch-btn">Launch in Conductor</button>
+          <button id="conductor-browse-dir">…</button>
+          <span id="conductor-status"></span>
+          <span id="conductor-sub"></span>
+          <span id="conductor-agent-hint"></span>
+          <span id="conductor-compressor-hint"></span>
+        </section>
+        <div id="conductor-sessions"></div>
+        <div id="conductor-empty">Conductor ready</div>
+        <div id="conductor-terminal" class="hidden">
+          <div id="conductor-terminal-header">
+            <span id="conductor-session-title"></span>
+            <button id="conductor-btn-rename"></button>
+            <button id="conductor-btn-restart"></button>
+            <button id="conductor-btn-stop"></button>
+            <button id="conductor-btn-close"></button>
+          </div>
+          <div id="conductor-xterm"></div>
+        </div>
+      </main>
+    `;
+  });
+
+  it('has conductor tab first and dashboard last in nav order', () => {
+    const tabs = Array.from(document.querySelectorAll('.nav-tab'));
+    expect(tabs[0]?.id).toBe('tab-btn-conductor');
+    expect(tabs[tabs.length - 1]?.id).toBe('tab-btn-dashboard');
+  });
+
+  it('has launch card with agent + compressor selectors', () => {
+    expect(document.getElementById('conductor-agent-select')).toBeTruthy();
+    expect(document.getElementById('conductor-compressor-select')).toBeTruthy();
+    expect(document.getElementById('conductor-launch-btn')).toBeTruthy();
+  });
+
+  it('has optional task prompt and workdir inputs', () => {
+    expect(document.getElementById('conductor-prompt')).toBeTruthy();
+    expect(document.getElementById('conductor-workdir')).toBeTruthy();
+    expect(document.getElementById('conductor-browse-dir')).toBeTruthy();
+  });
+
+  it('has embedded terminal host (no second $ prompt)', () => {
+    expect(document.getElementById('conductor-xterm')).toBeTruthy();
+    expect(document.getElementById('workflow-input')).toBeNull();
+  });
+
+  it('has session strip and empty state (terminal hidden by default)', () => {
+    expect(document.getElementById('conductor-sessions')).toBeTruthy();
+    expect(document.getElementById('conductor-empty')).toBeTruthy();
+    expect(document.getElementById('conductor-terminal')!.classList.contains('hidden')).toBe(true);
+  });
+
+  it('has rename, restart, stop, close session controls', () => {
+    for (const id of ['conductor-btn-rename', 'conductor-btn-restart', 'conductor-btn-stop', 'conductor-btn-close']) {
+      expect(document.getElementById(id)).toBeTruthy();
+    }
+  });
+
+  it('shows terminal and hides empty state when a session is active', () => {
+    const empty = document.getElementById('conductor-empty')!;
+    const terminal = document.getElementById('conductor-terminal')!;
+    empty.classList.add('hidden');
+    terminal.classList.remove('hidden');
+    expect(empty.classList.contains('hidden')).toBe(true);
+    expect(terminal.classList.contains('hidden')).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* Launch bar Workflow button                                          */
 /* ------------------------------------------------------------------ */
 
