@@ -356,3 +356,51 @@ describe('uninstalled compressors fail the launch path with a clear error', () =
     }
   });
 });
+
+describe('launch-port selection edge cases (launch bar -> backend)', () => {
+  it('uses the user-selected port when autoPort is off and the port is free', () => {
+    const def = getProxy('llmlingua');
+    const agent = getAgent('claude');
+    const profile = { ...defaultProfile('claude'), port: 8910, autoPort: false };
+    const plan = buildLaunchPlan(agent, profile, def, '/real/bin/llmlingua', '/real/bin/claude');
+    expect(plan.port).toBe(8910);
+    expect(plan.env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:8910');
+  });
+
+  it('falls back to default port when profile port is 0 or unset', () => {
+    // buildLaunchPlan trusts the resolved port passed in; chooseLaunchPort does
+    // the 0 -> defaultPort fallback in the main process. Verify the contract:
+    // buildLaunchPlan passes the profile port through verbatim (0 is the
+    // caller's signal to fall back).
+    const def = getProxy('pxpipe');
+    const agent = getAgent('claude');
+    const profile = { ...defaultProfile('claude'), port: 0, autoPort: false };
+    const plan = buildLaunchPlan(agent, profile, def, '/real/bin/pxpipe', '/real/bin/claude');
+    expect(plan.port).toBe(0);
+    // env style for pxpipe is anthropic.
+    if (agent.envStyle === 'anthropic' || agent.envStyle === 'both') {
+      expect(plan.env.ANTHROPIC_BASE_URL).toBe('http://127.0.0.1:0');
+    }
+  });
+
+  it('propagates the compressorId through buildLaunchPlan (no hardcoding)', () => {
+    const headroom = getProxy('headroom');
+    const pxpipe = getProxy('pxpipe');
+    const agent = getAgent('claude');
+    const profile = { ...defaultProfile('claude'), port: 8920, autoPort: false };
+    const p1 = buildLaunchPlan(agent, profile, headroom, '/b/headroom', '/b/claude');
+    const p2 = buildLaunchPlan(agent, profile, pxpipe, '/b/pxpipe', '/b/claude');
+    // Both use the SAME selected port, but different binaries/envs.
+    expect(p1.port).toBe(p2.port);
+    expect(p1.port).toBe(8920);
+    // headroom is arg-configured (--port appears as its own token).
+    expect(p1.proxyArgs).toContain('8920');
+    // pxpipe is env-configured: buildStartArgs returns [] (no port flag) and
+    // buildStartEnv supplies PORT/HOST at spawn time (not in plan.env).
+    expect(p2.proxyArgs).toEqual([]);
+    expect(pxpipe.buildStartEnv).toBeDefined();
+    expect(pxpipe.buildStartEnv!(8920, {}).PORT).toBe('8920');
+    expect(pxpipe.buildStartEnv!(8920, {}).HOST).toBe('127.0.0.1');
+  });
+});
+

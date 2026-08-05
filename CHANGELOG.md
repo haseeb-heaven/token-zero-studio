@@ -43,9 +43,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (detached spawn) and escalates to `SIGKILL`, so the selected compressor's port is
   actually released instead of orphaning the process.
 - **Real launch integration tests** (`tests/real-launch.test.ts`): spawns every installed
-  compressor and every installed agent at its EXACT default port through the real
-  spawn/fetch machinery and asserts TCP listen + port release on stop (compressors/agents
-  not installed on the current machine are skipped).
+  compressor and agent at its EXACT default port through real spawn/fetch, verifies TCP
+  listen + agent env + port release on stop; asserts the selected compressor's port is
+  what the UI reads back, and that uninstalled compressors produce a clear error.
+- E2E (via CDP): selecting a compressor in the launch bar + a port and launching binds the
+  compressor to that exact port (verified for headroom=8787, pxpipe=47821, and arbitrary
+  user-typed ports like 8813); the launch-status line shows the correct port.
 - **Dashboard iframe CSP**: `frame-src` added so the embedded proxy dashboard loads.
 - **Conductor tab removed** — Agents is the default landing view.
 - Removed 129 lines of dead `_openSettings` modal code (superseded by the Settings tab).
