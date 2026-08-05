@@ -77,8 +77,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   sandboxed preload bridge — no Node APIs are exposed to the UI.
 - Configuration is validated before persistence; corrupt config files are backed
   up as `config.json.corrupt` and replaced with defaults.
-
-## [1.0.0] - 2026-07-30
-
-### Added
-- First stable release. See [Unreleased](#unreleased) above for the feature set.
