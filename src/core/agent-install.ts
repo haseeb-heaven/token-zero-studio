@@ -63,12 +63,12 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   grok: {
     default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g @xai/grok-cli || npm install -g grok' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g grok || npm install -g @xai/grok-cli' },
     ],
   },
   'grok-build': {
     default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g @xai/grok-cli || npm install -g grok' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g grok || npm install -g @xai/grok-cli' },
     ],
   },
   goose: {
@@ -84,6 +84,9 @@ const CATALOG: Record<string, PlatformMap> = {
     default: [
       { id: 'npm', label: 'npm global', command: 'npm install -g opencode-ai' },
       { id: 'curl', label: 'Install script', command: 'curl -fsSL https://opencode.ai/install | bash' },
+    ],
+    win32: [
+      { id: 'npm', label: 'npm global', command: 'npm install -g opencode-ai' },
     ],
   },
   copilot: {
@@ -105,7 +108,7 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   kimi: {
     default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g @moonshotai/kimi-cli || npm install -g kimi-cli' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g kimi-cli || npm install -g @moonshotai/kimi-cli' },
     ],
   },
   windsurf: {

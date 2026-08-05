@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { AGENTS } from '../src/core/agents';
+import { getAgentInstallOptions } from '../src/core/agent-install';
 import { defaultConfig, defaultProfile, validateProfile } from '../src/core/config';
 import { getProxy } from '../src/core/proxies/registry';
 import {
@@ -177,6 +178,31 @@ describe('agent fact table sanity', () => {
     for (const port of ports) {
       expect(port).toBeGreaterThanOrEqual(8700);
       expect(port).toBeLessThanOrEqual(8999);
+    }
+  });
+
+  it('every agent has install options on every platform (cross-platform sweep)', () => {
+    const platforms = ['win32', 'darwin', 'linux'] as const;
+    for (const platform of platforms) {
+      for (const agent of AGENTS) {
+        const opts = getAgentInstallOptions(agent.id, platform);
+        expect(opts.length, `${agent.id}@${platform} install options`).toBeGreaterThan(0);
+        for (const opt of opts) {
+          expect(opt.command.trim().length, `${agent.id}@${platform}:${opt.id} command`).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  it('every agent has well-known paths on every platform (cross-platform sweep)', () => {
+    const platforms = ['win32', 'darwin', 'linux'] as const;
+    for (const platform of platforms) {
+      for (const agent of AGENTS) {
+        // 'instructions' agents (IDE extensions) have no CLI binary to locate.
+        if (agent.launchStrategy === 'instructions') continue;
+        const wk = agent.wellKnownPaths[platform];
+        expect(Array.isArray(wk) && wk.length > 0, `${agent.id}@${platform} wellKnownPaths`).toBe(true);
+      }
     }
   });
 });
