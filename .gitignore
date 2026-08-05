@@ -9,3 +9,6 @@ smoke.png
 .hermes/
 .aider.input.history
 .aider.tags.cache.v4/
+
+# editor duplicate artifacts (* N.ts)
+* [0-9].ts
