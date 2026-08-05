@@ -11,6 +11,7 @@ import type {
 import type { ProxyDefinition } from './proxies/types';
 import type { Logger } from './logger';
 import type { ProxyManager } from './proxy-manager';
+import { mergePathWithUserBins } from './platform';
 
 /* ------------------------------------------------------------------ */
 /* Pure plan builders (unit-tested, no side effects)                   */
@@ -58,6 +59,27 @@ export function buildAgentEnv(agent: AgentDefinition, profile: AgentProfile, pro
     env[key] = value;
   }
   return env;
+}
+
+/**
+ * Compose the FULL child environment for a spawned agent: the base process
+ * environment (with PATH augmented by user bin dirs so Electron's stripped
+ * PATH still resolves npm/pipx/uv/brew installs and node shims) overlaid
+ * with the proxy-specific vars from `planEnv`.
+ */
+export function composeChildEnv(
+  planEnv: Record<string, string>,
+  depsEnv: Record<string, string | undefined> | undefined,
+  platform: PlatformName,
+  homeDir: string,
+): Record<string, string> {
+  const base: Record<string, string> = {};
+  for (const [k, v] of Object.entries(depsEnv ?? process.env)) {
+    if (v !== undefined) base[k] = v;
+  }
+  const pathValue = base.PATH ?? base.Path ?? '';
+  base.PATH = mergePathWithUserBins(pathValue, platform, homeDir);
+  return { ...base, ...planEnv };
 }
 
 /**
@@ -325,6 +347,8 @@ export interface ProcessManagerDeps {
   exists?: (path: string) => boolean;
   /** Optional env snapshot for resolving helpers (defaults to process.env). */
   env?: Record<string, string | undefined>;
+  /** Home directory for PATH augmentation (defaults to process.env HOME/USERPROFILE). */
+  homeDir?: string;
 }
 
 interface RunningEntry {
@@ -515,6 +539,12 @@ export class ProcessManager {
 
   private terminalListeners = new Set<(launchId: string, data: string) => void>();
 
+  /** Resolve the home directory used for PATH augmentation. */
+  private homeDir(): string {
+    if (this.deps.homeDir && this.deps.homeDir.length > 0) return this.deps.homeDir;
+    return process.env.HOME ?? process.env.USERPROFILE ?? '';
+  }
+
   private emitTerminalData(launchId: string, data: string): void {
     for (const listener of this.terminalListeners) {
       try {
@@ -536,7 +566,7 @@ export class ProcessManager {
         `Launching ${agentName}: ${terminalCmd.cmd} ${terminalCmd.args.join(' ')}`,
       );
       const proc = this.deps.spawn(terminalCmd.cmd, terminalCmd.args, {
-        env: plan.env,
+        env: composeChildEnv(plan.env, this.deps.env, this.deps.platform, this.homeDir()),
         cwd: plan.cwd,
         detached: true,
       });
@@ -581,7 +611,7 @@ export class ProcessManager {
       this.deps.logger.info(launchId, 'PTY launch ' + agentName + ' via ' + launch.cmd);
       const proc = this.deps.spawn(launch.cmd, launch.args, {
         env: {
-          ...plan.env,
+          ...composeChildEnv(plan.env, this.deps.env, this.deps.platform, this.homeDir()),
           TERM: 'xterm-256color',
           PYTHONUNBUFFERED: '1',
           COLUMNS: plan.env.COLUMNS ?? '120',
@@ -596,7 +626,7 @@ export class ProcessManager {
     }
 
     const proc = this.deps.spawn(launch.cmd, launch.args, {
-      env: { ...plan.env, TERM: 'xterm-256color', FORCE_COLOR: '1' },
+      env: { ...composeChildEnv(plan.env, this.deps.env, this.deps.platform, this.homeDir()), TERM: 'xterm-256color', FORCE_COLOR: '1' },
       cwd: plan.cwd,
     });
     this.pipeLogs(proc, launchId, agentName);

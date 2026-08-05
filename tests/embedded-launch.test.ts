@@ -152,6 +152,54 @@ describe('formatStdinPayload', () => {
 });
 
 describe('ProcessManager embedded launch', () => {
+  it('embedded spawn env preserves PATH so node-shim agents can exec', async () => {
+    const { spawn, spawned } = fakeSpawn();
+    const proxyManager = new ProxyManager({
+      spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'darwin',
+    });
+    const pm = new ProcessManager({
+      spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(),
+      platform: 'darwin', terminal: 'xterm', proxyManager,
+      exists: (p) => p === '/opt/homebrew/bin/python3',
+      env: { PATH: '/opt/homebrew/bin:/usr/bin:/bin' },
+      homeDir: '/Users/test',
+    });
+    const agent = getAgent('codex');
+    const profile = { ...defaultProfile('codex'), port: 8404 };
+    const headroom = getProxy('headroom');
+    const plan = buildLaunchPlan(agent, profile, headroom, '/hb/headroom', '/opt/homebrew/bin/codex');
+
+    await pm.start('codex-4', plan, headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 1000, true);
+    const agentSpawn = spawned[spawned.length - 1];
+    expect(agentSpawn.opts.env.PATH).toContain('/usr/bin');
+    expect(agentSpawn.opts.env.TERM).toBe('xterm-256color');
+    pm.stop('codex-4');
+  });
+
+  it('external terminal launch env preserves PATH for the launcher command', async () => {
+    const { spawn, spawned } = fakeSpawn();
+    const proxyManager = new ProxyManager({
+      spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(), platform: 'darwin',
+    });
+    const pm = new ProcessManager({
+      spawn, fetch: readyFetch, sleep: noSleep, logger: new Logger(),
+      platform: 'darwin', terminal: 'xterm', proxyManager,
+      exists: (p) => p === '/opt/homebrew/bin/python3',
+      env: { PATH: '/opt/homebrew/bin:/usr/bin:/bin' },
+      homeDir: '/Users/test',
+    });
+    const agent = getAgent('codex');
+    const profile = { ...defaultProfile('codex'), port: 8405 };
+    const headroom = getProxy('headroom');
+    const plan = buildLaunchPlan(agent, profile, headroom, '/hb/headroom', '/opt/homebrew/bin/codex');
+
+    await pm.start('codex-5', plan, headroom, '/hb/headroom', headroom.defaultFlags, 'Codex', 1000, false);
+    const terminalSpawn = spawned[spawned.length - 1];
+    expect(terminalSpawn.cmd).toBe('osascript');
+    expect(terminalSpawn.opts.env.PATH).toContain('/usr/bin');
+    pm.stop('codex-5');
+  });
+
   it('spawns via python-pty for embedded CLI on linux and wires stdin', async () => {
     const { spawn, spawned } = fakeSpawn();
     const proxyManager = new ProxyManager({
