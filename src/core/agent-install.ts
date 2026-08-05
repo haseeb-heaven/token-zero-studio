@@ -65,12 +65,12 @@ const CATALOG: Record<string, PlatformMap> = {
   },
   grok: {
     default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g grok || npm install -g @xai/grok-cli' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g grok-cli', note: 'npm "grok" is an unrelated broken package; grok-cli ships the grok binary' },
     ],
   },
   'grok-build': {
     default: [
-      { id: 'npm', label: 'npm global', command: 'npm install -g grok || npm install -g @xai/grok-cli' },
+      { id: 'npm', label: 'npm global', command: 'npm install -g grok-cli', note: 'npm "grok" is an unrelated broken package; grok-cli ships the grok binary' },
     ],
   },
   goose: {

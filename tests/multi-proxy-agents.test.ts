@@ -67,8 +67,13 @@ describe('Multi-Proxy Matrix Testing', () => {
 
       it('builds proxy start args', () => {
         const args = buildProxyArgs(proxyDef, profile);
-        if (proxyDef.id === 'headroom' || proxyDef.id === 'pxpipe') {
+        if (proxyDef.id === 'headroom') {
           expect(args).toContain(String(profile.port));
+        } else if (proxyDef.id === 'pxpipe') {
+          // pxpipe is env-configured — no CLI flags; port goes via buildStartEnv.
+          expect(args).toEqual([]);
+          const env = proxyDef.buildStartEnv?.(profile.port, {});
+          expect(env?.PORT).toBe(String(profile.port));
         } else if (proxyDef.id === 'rtk') {
           expect(args).toEqual([]);
         } else {

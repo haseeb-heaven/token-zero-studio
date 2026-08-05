@@ -58,11 +58,8 @@ export const PROXIES: ProxyDefinition[] = [
     detectCommand: 'pxpipe-proxy --version || pxpipe --version',
     defaultPort: 47821,
     defaultFlags: {},
-    buildStartArgs: (port, flags) => {
-      const args = ['--port', String(port)];
-      if (flags.extraArgs) args.push(...flags.extraArgs.split(/\s+/));
-      return args;
-    },
+    buildStartArgs: () => [], // pxpipe is env-configured — accepts no CLI flags
+    buildStartEnv: (port) => ({ PORT: String(port), HOST: '127.0.0.1' }),
     envStyle: 'anthropic',
     installInstructions: 'npx pxpipe-proxy (or npm install -g pxpipe-proxy)',
     accent: '#a78bfa',

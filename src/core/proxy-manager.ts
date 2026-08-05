@@ -133,10 +133,18 @@ export class ProxyManager {
     this.emit(launchId, entry);
 
     const args = definition.buildStartArgs(port, flags as Parameters<typeof definition.buildStartArgs>[1]);
+    const startEnv = definition.buildStartEnv?.(port, flags as Parameters<typeof definition.buildStartEnv>[1]) ?? {};
+    // Base process env + proxy-specific vars. An empty env breaks node/python
+    // shim binaries (they need PATH) — always carry the real environment.
+    const procEnv: Record<string, string> = {};
+    for (const [k, v] of Object.entries(process.env)) {
+      if (v !== undefined) procEnv[k] = v;
+    }
+    Object.assign(procEnv, startEnv);
 
     try {
       entry.proc = this.deps.spawn(binary, args, {
-        env: {},
+        env: procEnv,
         cwd: process.cwd(),
         detached: true,
       });

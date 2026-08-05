@@ -758,6 +758,38 @@ function renderSettings(): void {
   termLabel.append(termCheck, document.createTextNode(' Fall back to external terminal window'));
   termSection.appendChild(termLabel);
   container.appendChild(termSection);
+  // Embedded (Workflow) terminal transport choice.
+  const ttySection = document.createElement('div');
+  ttySection.className = 'card settings-section';
+  ttySection.innerHTML = '<h3>Workflow terminal (TTY)</h3>';
+  const ttyLabel = document.createElement('label');
+  ttyLabel.className = 'field';
+  ttyLabel.appendChild(document.createTextNode('Transport for embedded agent terminals'));
+  const ttySelect = document.createElement('select');
+  const ttyOptions: Array<[string, string]> = [
+    ['auto', 'Auto (recommended) — python PTY bridge on macOS/Linux, direct on Windows'],
+    ['python-pty', 'python PTY bridge — full TUI support (cursor, colors)'],
+    ['direct', 'Direct stdio pipes — plain text only, no TUI'],
+  ];
+  for (const [value, text] of ttyOptions) {
+    const o = document.createElement('option');
+    o.value = value;
+    o.textContent = text;
+    ttySelect.appendChild(o);
+  }
+  ttySelect.value = config.terminalMode ?? 'auto';
+  ttySelect.onchange = () => {
+    config!.terminalMode = ttySelect.value as 'auto' | 'python-pty' | 'direct';
+    saveConfig(true);
+    toast('TTY mode saved — applies to new sessions');
+  };
+  const ttyHint = document.createElement('div');
+  ttyHint.className = 'small muted';
+  ttyHint.textContent = 'If the agent TUI shows missing characters or input is not read, try switching to the other mode.';
+  ttyLabel.appendChild(ttySelect);
+  ttyLabel.appendChild(ttyHint);
+  ttySection.appendChild(ttyLabel);
+  container.appendChild(ttySection);
   renderCustomAgentsSection(container);
 }
 

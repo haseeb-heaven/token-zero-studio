@@ -93,14 +93,14 @@ describe('headroom definition', () => {
 describe('pxpipe definition', () => {
   const def = getProxy('pxpipe');
 
-  it('builds proxy args with port', () => {
+  it('takes no CLI flags (env-configured binary)', () => {
     const args = def.buildStartArgs(47821, {});
-    expect(args).toEqual(['--port', '47821']);
+    expect(args).toEqual([]);
   });
 
-  it('appends extra args', () => {
-    const args = def.buildStartArgs(47821, { extraArgs: '--verbose' });
-    expect(args).toContain('--verbose');
+  it('exposes the port via buildStartEnv (PORT/HOST)', () => {
+    const env = def.buildStartEnv?.(47821, {});
+    expect(env).toEqual({ PORT: '47821', HOST: '127.0.0.1' });
   });
 
   it('has envStyle anthropic only', () => {

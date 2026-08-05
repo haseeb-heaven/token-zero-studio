@@ -123,6 +123,12 @@ export interface AppConfig {
   defaultWorkingDirectory: string;
   /** When true, fall back to an external terminal window for agent output. */
   terminalFallback: boolean;
+  /**
+   * Embedded (Workflow) terminal transport. 'auto' picks the best for the
+   * platform; 'python-pty' wraps the agent in a python PTY bridge; 'direct'
+   * spawns the agent with plain stdio pipes.
+   */
+  terminalMode: 'auto' | 'python-pty' | 'direct';
   /** Per-proxy saved profiles. */
   proxies: ProxyConfig[];
   agents: AgentConfig[];

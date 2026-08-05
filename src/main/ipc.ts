@@ -282,6 +282,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     platform: ctx.platform,
     terminal: detectTerminal(ctx),
     proxyManager,
+    terminalMode: store?.load().terminalMode ?? 'auto',
   });
 
   const send = (channel: string, payload: unknown) => {

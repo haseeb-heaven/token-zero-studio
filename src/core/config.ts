@@ -233,6 +233,7 @@ export function defaultConfig(): AppConfig {
     defaultCompressor: 'headroom',
     defaultWorkingDirectory: '',
     terminalFallback: false,
+    terminalMode: 'auto',
     proxies: PROXIES.map((proxy) => ({
       proxyId: proxy.id,
       profiles: [defaultProxyProfile(proxy.id)],
@@ -263,6 +264,9 @@ export function mergeConfig(raw: unknown): AppConfig {
   if (typeof input.defaultCompressor === 'string') base.defaultCompressor = input.defaultCompressor;
   if (typeof input.defaultWorkingDirectory === 'string') base.defaultWorkingDirectory = input.defaultWorkingDirectory;
   if (typeof input.terminalFallback === 'boolean') base.terminalFallback = input.terminalFallback;
+  if (input.terminalMode === 'auto' || input.terminalMode === 'python-pty' || input.terminalMode === 'direct') {
+    base.terminalMode = input.terminalMode;
+  }
   if (
     typeof input.proxyStartupTimeoutMs === 'number' &&
     Number.isInteger(input.proxyStartupTimeoutMs) &&

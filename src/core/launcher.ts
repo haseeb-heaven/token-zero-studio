@@ -157,12 +157,21 @@ export function buildEmbeddedLaunchCommand(input: {
   agentArgs: string[];
   exists: (path: string) => boolean;
   env: Record<string, string | undefined>;
+  /** Terminal transport override: 'direct' forces plain pipes, 'python-pty' forces the PTY bridge, 'auto' (default) picks per platform. */
+  terminalMode?: 'auto' | 'python-pty' | 'direct';
 }): EmbeddedLaunchCommand {
   const bin = input.agentBin;
   const args = input.agentArgs;
+  const mode = input.terminalMode ?? 'auto';
 
+  if (mode === 'direct') {
+    return { method: 'direct', cmd: bin, args: [...args] };
+  }
   if (input.platform === 'win32' || input.strategy !== 'env') {
     return { method: 'direct', cmd: bin, args: [...args] };
+  }
+  if (mode === 'python-pty' || input.platform === 'darwin' || input.platform === 'linux') {
+    // python-pty bridge for POSIX CLI agents (default on darwin/linux)
   }
 
   const python = resolvePythonBinary(input.platform, input.exists, input.env);
@@ -349,6 +358,8 @@ export interface ProcessManagerDeps {
   env?: Record<string, string | undefined>;
   /** Home directory for PATH augmentation (defaults to process.env HOME/USERPROFILE). */
   homeDir?: string;
+  /** Embedded terminal transport ('auto' | 'python-pty' | 'direct'). */
+  terminalMode?: 'auto' | 'python-pty' | 'direct';
 }
 
 interface RunningEntry {
@@ -605,6 +616,7 @@ export class ProcessManager {
       agentArgs: args,
       exists,
       env,
+      terminalMode: this.deps.terminalMode,
     });
 
     if (launch.method === 'python-pty') {

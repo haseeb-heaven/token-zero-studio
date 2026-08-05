@@ -32,6 +32,11 @@ export interface ProxyDefinition {
   defaultFlags: ProxyFlags;
   /** Build the start command arguments for the proxy binary. */
   buildStartArgs: (port: number, flags: ProxyFlags) => string[];
+  /**
+   * Optional environment variables for the proxy process (e.g. PORT/HOST for
+   * env-configured binaries like pxpipe). Merged over the base process env.
+   */
+  buildStartEnv?: (port: number, flags: ProxyFlags) => Record<string, string>;
   /** Which env vars to inject into the agent. */
   envStyle: ProxyEnvStyle;
   /** Install instructions shown in the UI. */
