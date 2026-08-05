@@ -7,3 +7,5 @@ smoke.png
 .npm-cache/
 .aider.chat.history.md
 .hermes/
+.aider.input.history
+.aider.tags.cache.v4/
