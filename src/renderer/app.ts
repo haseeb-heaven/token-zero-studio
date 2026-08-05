@@ -944,25 +944,7 @@ function showWorkflowContextMenu(x: number, y: number, session: WorkflowSession)
         if (activeWorkflowSession === session.id) showWorkflowTerminal(session);
       }
     }},
-    { label: 'Restart', icon: '\uD83D\uDD04', action: async () => {
-      try { await api.stop(session.launchId); } catch {}
-      session.output = [];
-      workflowXtermLaunchId = null;
-      workflowStatusLine(session, 'Restarting...');
-      renderWorkflowTabs();
-      if (activeWorkflowSession === session.id) showWorkflowTerminal(session);
-      try {
-        const rt = await api.launchEmbedded({ agentId: session.agentId, compressorId: session.compressorId });
-        session.launchId = rt.id ?? session.launchId;
-        session.trackerId = (rt as any).trackerId;
-        session.state = rt.state;
-        if (rt.output?.length) session.output = [...rt.output];
-        workflowStatusLine(session, 'Restarted on port ' + rt.port);
-      } catch (err) {
-        workflowStatusLine(session, 'Error: ' + String(err));
-      }
-      renderWorkflow();
-    }},
+    { label: 'Restart', icon: '\uD83D\uDD04', action: () => { void restartWorkflowSession(session); } },
     { label: 'Stop', icon: '\u23F9\uFE0F', action: async () => {
       try { await api.stop(session.launchId); } catch {}
       session.state = 'stopped';
@@ -971,17 +953,7 @@ function showWorkflowContextMenu(x: number, y: number, session: WorkflowSession)
       if (activeWorkflowSession === session.id) showWorkflowTerminal(session);
       toast('Stopped: ' + session.agentName);
     }},
-    { label: 'Close', icon: '\u2716\uFE0F', action: async () => {
-      try { await api.stop(session.launchId); } catch {}
-      const idx = workflowSessions.indexOf(session);
-      if (idx >= 0) workflowSessions.splice(idx, 1);
-      runtimes.delete(session.agentId);
-      if (activeWorkflowSession === session.id) {
-        activeWorkflowSession = workflowSessions.length > 0 ? workflowSessions[workflowSessions.length - 1].id : null;
-      }
-      renderWorkflow();
-      toast('Closed: ' + session.agentName);
-    }},
+    { label: 'Close', icon: '\u2716\uFE0F', action: () => { void closeWorkflowSession(session); } },
   ];
 
   for (const item of items) {
@@ -1073,6 +1045,17 @@ function showWorkflowTerminal(session: WorkflowSession): void {
   el('wf-session-title').textContent =
     session.agentName + ' · ' + session.compressorId + (session.state === 'running' ? '' : ' · ' + session.state);
 
+  // Header buttons mirror the right-click context-menu actions.
+  const renameBtn = document.getElementById('wf-btn-rename') as HTMLButtonElement | null;
+  const restartBtn = document.getElementById('wf-btn-restart') as HTMLButtonElement | null;
+  const closeBtn = document.getElementById('wf-btn-close') as HTMLButtonElement | null;
+  if (renameBtn) renameBtn.onclick = () => {
+    const name = prompt('Rename session:', session.agentName);
+    if (name && name.trim()) { session.agentName = name.trim(); renderWorkflowTabs(); showWorkflowTerminal(session); }
+  };
+  if (restartBtn) restartBtn.onclick = () => { void restartWorkflowSession(session); };
+  if (closeBtn) closeBtn.onclick = () => { void closeWorkflowSession(session); };
+
   const term = ensureWorkflowXterm();
   // Switching sessions: clear and show a short banner; live PTY stream continues for active launch.
   if (workflowXtermLaunchId !== session.launchId) {
@@ -1116,6 +1099,40 @@ function workflowStatusLine(session: WorkflowSession, text: string): void {
   session.output.push(text);
   if (activeWorkflowSession !== session.id) return;
   if (workflowXterm) workflowXterm.writeln(text);
+}
+
+/** Restart a workflow session: stop, clear output, relaunch embedded. */
+async function restartWorkflowSession(session: WorkflowSession): Promise<void> {
+  try { await api.stop(session.launchId); } catch {}
+  session.output = [];
+  workflowXtermLaunchId = null;
+  workflowStatusLine(session, 'Restarting...');
+  renderWorkflowTabs();
+  if (activeWorkflowSession === session.id) showWorkflowTerminal(session);
+  try {
+    const rt = await api.launchEmbedded({ agentId: session.agentId, compressorId: session.compressorId });
+    session.launchId = rt.id ?? session.launchId;
+    session.trackerId = (rt as { trackerId?: string }).trackerId;
+    session.state = rt.state;
+    if (rt.output?.length) session.output = [...rt.output];
+    workflowStatusLine(session, 'Restarted on port ' + rt.port);
+  } catch (err) {
+    workflowStatusLine(session, 'Error: ' + String(err));
+  }
+  renderWorkflow();
+}
+
+/** Close a workflow session: stop the process and drop it from the list. */
+async function closeWorkflowSession(session: WorkflowSession): Promise<void> {
+  try { await api.stop(session.launchId); } catch {}
+  const idx = workflowSessions.indexOf(session);
+  if (idx >= 0) workflowSessions.splice(idx, 1);
+  runtimes.delete(session.agentId);
+  if (activeWorkflowSession === session.id) {
+    activeWorkflowSession = workflowSessions.length > 0 ? workflowSessions[workflowSessions.length - 1].id : null;
+  }
+  renderWorkflow();
+  toast('Closed: ' + session.agentName);
 }
 
 /** Add a new workflow session from an embedded launch. Returns the session, or null when one was already live. */
@@ -1424,11 +1441,15 @@ async function launch(): Promise<void> {
   syncFormToProfile();
   if (!(await saveConfig(true))) return;
   const agent = agents.find((a) => a.id === selectedId)!;
-  el('launch-status').textContent = 'Starting Headroom proxy…';
+  // Use the compressor chosen in the launch bar (falls back to the saved default).
+  const compressorSelect = document.getElementById('launch-bar-compressor-select') as HTMLSelectElement | null;
+  const compressorId = compressorSelect?.value || config?.defaultCompressor || 'headroom';
+  const proxyName = PROXIES.find((p) => p.id === compressorId)?.name ?? compressorId.toUpperCase();
+  el('launch-status').textContent = `Starting ${proxyName} proxy…`;
   try {
-    const rt = await api.start({ agentId: selectedId });
+    const rt = await api.start({ agentId: selectedId, compressorId });
     runtimes.set(selectedId, rt);
-    toast(`${agent.name}: ${STATE_LABEL[rt.state]}`);
+    toast(`${agent.name}: ${STATE_LABEL[rt.state]}${rt.port ? ` on port ${rt.port}` : ''} via ${proxyName}`);
   } catch (err) {
     toast(String(err instanceof Error ? err.message : err), 'err');
   }
@@ -1575,148 +1596,6 @@ async function refreshHeadroomStatus(): Promise<void> {
     pill.className = 'pill pill-unknown';
     text.textContent = `${proxyDef.name} error`;
   }
-}
-
-/* =========================== Settings modal =========================== */
-
-// @ts-ignore (unused, settings moved to tab)
-async function _openSettings(): Promise<void> {
-  if (!config) return;
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  const modal = document.createElement('div');
-  modal.className = 'modal';
-
-  const title = document.createElement('h2');
-  title.textContent = 'Studio settings';
-
-  // Active proxy selector
-  const proxyField = document.createElement('div');
-  proxyField.className = 'field';
-  const proxyLabel = document.createElement('label');
-  proxyLabel.textContent = 'Active Proxy';
-  const proxySelect = document.createElement('select');
-  const proxies = await api.listProxies();
-  for (const p of proxies) {
-    const opt = document.createElement('option');
-    opt.value = p.id;
-    opt.textContent = `${p.name} — ${p.description}`;
-    opt.selected = (config.defaultCompressor || 'headroom') === p.id;
-    proxySelect.appendChild(opt);
-  }
-  proxyField.append(proxyLabel, proxySelect);
-
-  // proxy binary path
-  const pathField = document.createElement('div');
-  pathField.className = 'field';
-  const pathLabel = document.createElement('label');
-  pathLabel.textContent = 'Proxy executable (empty = auto-detect)';
-  const pathRow = document.createElement('div');
-  pathRow.className = 'field-row';
-  const pathInput = document.createElement('input');
-  pathInput.type = 'text';
-  pathInput.placeholder = 'e.g. /usr/local/bin/headroom';
-  pathInput.value = config.headroomPath;
-  const browseBtn = document.createElement('button');
-  browseBtn.className = 'btn';
-  browseBtn.textContent = 'Browse…';
-  const detectBtn = document.createElement('button');
-  detectBtn.className = 'btn';
-  detectBtn.textContent = 'Detect';
-  pathRow.append(pathInput, browseBtn, detectBtn);
-  const detectStatus = document.createElement('div');
-  detectStatus.className = 'detect-status muted';
-  pathField.append(pathLabel, pathRow, detectStatus);
-
-  // startup timeout
-  const timeoutField = document.createElement('div');
-  timeoutField.className = 'field';
-  const timeoutLabel = document.createElement('label');
-  timeoutLabel.textContent = 'Proxy startup timeout (seconds)';
-  const timeoutInput = document.createElement('input');
-  timeoutInput.type = 'number';
-  timeoutInput.min = '5';
-  timeoutInput.max = '300';
-  timeoutInput.value = String(Math.round(config.proxyStartupTimeoutMs / 1000));
-  timeoutField.append(timeoutLabel, timeoutInput);
-
-  // theme
-  const themeField = document.createElement('div');
-  themeField.className = 'field';
-  const themeLabel = document.createElement('label');
-  themeLabel.textContent = 'Theme';
-  const themeSelect = document.createElement('select');
-  for (const [value, label] of [
-    ['system', 'System (follows OS dark/light)'],
-    ['dark', 'Dark'],
-    ['light', 'Light'],
-  ] as const) {
-    const opt = document.createElement('option');
-    opt.value = value;
-    opt.textContent = label;
-    opt.selected = config.theme === value;
-    themeSelect.appendChild(opt);
-  }
-  themeSelect.onchange = () => applyTheme(themeSelect.value as ThemeMode); // live preview
-  themeField.append(themeLabel, themeSelect);
-
-  const runDetect = async () => {
-    detectStatus.textContent = 'Detecting…';
-    const selectedProxy = proxySelect.value;
-    const res = await api.detectProxy(selectedProxy, pathInput.value.trim() || undefined);
-    detectStatus.textContent = res.found ? `Found: ${res.paths[0]}` : `Not found — configure binary path or install ${selectedProxy}`;
-    detectStatus.style.color = res.found ? 'var(--ok)' : 'var(--err)';
-    if (res.found && res.source !== 'explicit' && !pathInput.value) {
-      detectStatus.textContent += ' (auto-detect will use this)';
-    }
-  };
-
-  proxySelect.onchange = () => void runDetect();
-
-  browseBtn.onclick = async () => {
-    const picked = await api.pickExecutable();
-    if (picked) {
-      pathInput.value = picked;
-      void runDetect();
-    }
-  };
-  detectBtn.onclick = () => void runDetect();
-  void runDetect();
-
-  const actions = document.createElement('div');
-  actions.className = 'modal-actions';
-  const cancel = document.createElement('button');
-  cancel.className = 'btn btn-ghost';
-  cancel.textContent = 'Cancel';
-  const save = document.createElement('button');
-  save.className = 'btn btn-primary';
-  save.textContent = 'Save';
-  actions.append(cancel, save);
-
-  cancel.onclick = () => {
-    applyTheme(config!.theme); // revert live preview
-    overlay.remove();
-  };
-  save.onclick = async () => {
-    config!.defaultCompressor = proxySelect.value;
-    config!.headroomPath = pathInput.value.trim();
-    config!.theme = themeSelect.value as ThemeMode;
-    const seconds = Number(timeoutInput.value);
-    config!.proxyStartupTimeoutMs =
-      Number.isFinite(seconds) && seconds >= 5 && seconds <= 300
-        ? Math.round(seconds * 1000)
-        : config!.proxyStartupTimeoutMs;
-    if (await saveConfig(true)) {
-      applyTheme(config!.theme);
-      overlay.remove();
-      await refreshHeadroomStatus();
-      toast('Settings saved');
-    }
-  };
-
-  modal.append(title, proxyField, pathField, timeoutField, themeField, actions);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
 }
 
 /* ============================ Port checking ============================ */
